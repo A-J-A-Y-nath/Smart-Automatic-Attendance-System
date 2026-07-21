@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+.env
+
+# Android Studio / Gradle
+.gradle/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aar
+
+# IDE & Editor
+.idea/
+.vscode/
+*.swp
+*.bak
+
+# Antigravity artifacts
+brain/
+scratch/
