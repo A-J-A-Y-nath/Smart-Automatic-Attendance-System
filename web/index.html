@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Attendance System - Integration & Testing Console</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Navbar -->
+        <header class="navbar">
+            <div class="logo-group">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-tower-broadcast"></i>
+                </div>
+                <div>
+                    <h1>Smart Attendance Console</h1>
+                    <p class="subtitle">mDNS Beacon & FCM High-Priority Testing Environment</p>
+                </div>
+            </div>
+
+            <div class="config-bar">
+                <div class="input-group-inline">
+                    <label for="backend-url"><i class="fa-solid fa-server"></i> Backend URL:</label>
+                    <input type="text" id="backend-url" value="http://localhost:5000" placeholder="http://127.0.0.1:5000">
+                </div>
+                <button id="btn-run-all-tests" class="btn btn-primary">
+                    <i class="fa-solid fa-bolt"></i> Run Automated E2E Flow
+                </button>
+                <button id="btn-health-check" class="btn btn-secondary">
+                    <i class="fa-solid fa-heart-pulse"></i> Ping Server
+                </button>
+                <div id="connection-status" class="status-badge status-offline">
+                    <span class="status-dot"></span> Offline
+                </div>
+            </div>
+        </header>
+
+        <!-- Architecture Flow Visualizer -->
+        <section class="visualizer-card glass-panel">
+            <div class="card-header">
+                <h2><i class="fa-solid fa-diagram-project"></i> Live Architecture Flow Simulator</h2>
+                <span class="badge badge-purple">Zero-User-Interaction Architecture</span>
+            </div>
+            <div class="flow-container">
+                <div class="flow-node" id="node-teacher">
+                    <div class="node-icon"><i class="fa-solid fa-chalkboard-user"></i></div>
+                    <div class="node-title">Teacher Dashboard</div>
+                    <div class="node-sub">POST /start-session</div>
+                </div>
+                <div class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                <div class="flow-node" id="node-backend">
+                    <div class="node-icon"><i class="fa-solid fa-server"></i></div>
+                    <div class="node-title">Flask Backend</div>
+                    <div class="node-sub">Creates Session & Dispatches FCM</div>
+                </div>
+                <div class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                <div class="flow-node" id="node-fcm">
+                    <div class="node-icon"><i class="fa-solid fa-bell"></i></div>
+                    <div class="node-title">FCM High-Priority</div>
+                    <div class="node-sub">Data Payload Push</div>
+                </div>
+                <div class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                <div class="flow-node" id="node-mdns">
+                    <div class="node-icon"><i class="fa-solid fa-wifi"></i></div>
+                    <div class="node-title">ESP8266 Beacon</div>
+                    <div class="node-sub">mDNS _attendance._tcp</div>
+                </div>
+                <div class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                <div class="flow-node" id="node-student">
+                    <div class="node-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
+                    <div class="node-title">Student App</div>
+                    <div class="node-sub">POST /mark-attendance</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Grid Layout -->
+        <main class="main-grid">
+            <!-- Left Column: Testing Cards -->
+            <div class="test-controllers">
+                <!-- Tab Navigation -->
+                <div class="tabs-nav glass-panel">
+                    <button class="tab-btn active" data-tab="tab-teacher"><i class="fa-solid fa-chalkboard-teacher"></i> Teacher Role</button>
+                    <button class="tab-btn" data-tab="tab-student"><i class="fa-solid fa-user-graduate"></i> Student Role</button>
+                    <button class="tab-btn" data-tab="tab-auth"><i class="fa-solid fa-key"></i> Authentication</button>
+                </div>
+
+                <!-- Tab 1: Teacher Operations -->
+                <div class="tab-content active" id="tab-teacher">
+                    <div class="card glass-panel">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-play-circle"></i> Trigger Attendance Session</h3>
+                            <span class="endpoint-pill method-post">POST /api/teacher/start-session</span>
+                        </div>
+                        <form id="form-start-session" class="form-grid">
+                            <div class="form-group">
+                                <label for="teacher-classroom-id">Classroom ID</label>
+                                <input type="number" id="teacher-classroom-id" value="1" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="teacher-subject-id">Subject ID</label>
+                                <input type="number" id="teacher-subject-id" value="1" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="teacher-id">Teacher ID</label>
+                                <input type="number" id="teacher-id" value="2" required>
+                            </div>
+                            <div class="form-group full-width">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fa-solid fa-paper-plane"></i> Broadcast Session & FCM Push
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="card glass-panel">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-heart"></i> Teacher API Module Check</h3>
+                            <span class="endpoint-pill method-get">GET /api/teacher/health</span>
+                        </div>
+                        <button id="btn-teacher-health" class="btn btn-secondary full-width">
+                            <i class="fa-solid fa-stethoscope"></i> Ping Teacher Module
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Student Operations -->
+                <div class="tab-content" id="tab-student">
+                    <div class="card glass-panel">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-check-double"></i> Mark Attendance Attestation</h3>
+                            <span class="endpoint-pill method-post">POST /api/student/mark-attendance</span>
+                        </div>
+                        <form id="form-mark-attendance" class="form-grid">
+                            <div class="form-group">
+                                <label for="student-session-id">Active Session ID</label>
+                                <input type="number" id="student-session-id" value="1" placeholder="Session ID from Teacher" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="student-id">Student ID</label>
+                                <input type="number" id="student-id" value="3" required>
+                            </div>
+                            <div class="form-group full-width">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fa-solid fa-location-crosshairs"></i> Simulate mDNS Beacon Resolution & Submit
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="card glass-panel">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-heart"></i> Student API Module Check</h3>
+                            <span class="endpoint-pill method-get">GET /api/student/health</span>
+                        </div>
+                        <button id="btn-student-health" class="btn btn-secondary full-width">
+                            <i class="fa-solid fa-stethoscope"></i> Ping Student Module
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Auth & Identity -->
+                <div class="tab-content" id="tab-auth">
+                    <div class="card glass-panel">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-right-to-bracket"></i> Login Simulator</h3>
+                            <span class="endpoint-pill method-post">POST /api/auth/login</span>
+                        </div>
+                        <form id="form-login" class="form-grid">
+                            <div class="form-group">
+                                <label for="login-email">Email Address</label>
+                                <input type="email" id="login-email" value="teacher@rit.ac.in" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="login-password">Password</label>
+                                <input type="password" id="login-password" value="TeacherPass@123" required>
+                            </div>
+                            <div class="form-group full-width">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fa-solid fa-key"></i> Authenticate & Store JWT Token
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="card glass-panel">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-user-shield"></i> Validate JWT Token</h3>
+                            <span class="endpoint-pill method-get">GET /api/auth/me</span>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="stored-jwt">Active Bearer Token</label>
+                            <input type="text" id="stored-jwt" placeholder="No token active (Login first)" readonly>
+                        </div>
+                        <button id="btn-auth-me" class="btn btn-secondary full-width margin-top">
+                            <i class="fa-solid fa-id-card"></i> Fetch Authenticated Profile
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Live Inspector & Console Log -->
+            <div class="inspector-panel glass-panel">
+                <div class="card-header">
+                    <h3><i class="fa-solid fa-terminal"></i> Network Inspector & Payload Log</h3>
+                    <button id="btn-clear-logs" class="btn btn-icon" title="Clear Console">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+
+                <div class="inspector-details">
+                    <div class="meta-bar">
+                        <div class="meta-item">
+                            <span class="meta-label">Last Status:</span>
+                            <span id="res-status-code" class="status-code">---</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Latency:</span>
+                            <span id="res-latency" class="meta-value">-- ms</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Method:</span>
+                            <span id="res-method" class="meta-value">--</span>
+                        </div>
+                    </div>
+
+                    <div class="code-container">
+                        <div class="code-header">Response Data (JSON)</div>
+                        <pre id="json-viewer" class="json-code"><code>// Executed endpoint responses will appear here formatted...</code></pre>
+                    </div>
+
+                    <div class="log-container">
+                        <div class="log-header">System Events</div>
+                        <div id="event-logs" class="log-feed">
+                            <div class="log-entry log-info">[SYSTEM] Console initialized. Target backend: http://localhost:5000</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

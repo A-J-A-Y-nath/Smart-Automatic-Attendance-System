@@ -29,6 +29,7 @@ CREATE TABLE users (
     role ENUM('Student', 'Teacher', 'Admin') NOT NULL,
     department_id INT,
     semester INT,
+    fcm_token VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (department_id)
@@ -99,7 +100,7 @@ CREATE TABLE attendance_sessions (
     start_time DATETIME NOT NULL,
     end_time DATETIME,
 
-    status ENUM('ACTIVE', 'CLOSED') DEFAULT 'ACTIVE',
+    status ENUM('ACTIVE', 'CLOSED', 'EXPIRED') DEFAULT 'ACTIVE',
 
     FOREIGN KEY (subject_id)
         REFERENCES subjects(id),

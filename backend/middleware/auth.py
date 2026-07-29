@@ -6,7 +6,9 @@ to protect API endpoints using JWT authentication and role checking.
 """
 
 from functools import wraps
+# pyrefly: ignore [missing-import]
 from flask import request, jsonify, g
+# pyrefly: ignore [missing-import]
 import jwt
 from utils.jwt_handler import decode_token
 

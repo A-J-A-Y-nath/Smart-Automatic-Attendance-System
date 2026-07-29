@@ -36,10 +36,24 @@ def seed_database():
 
             # 5. Seed Student
             cursor.execute("""
-                INSERT INTO users (name, register_no, email, password, role, department_id, semester)
-                VALUES ('M. S. Ajaynath', 'MCA2024001', 'student@rit.ac.in', %s, 'Student', 1, 4)
-                ON DUPLICATE KEY UPDATE password=%s;
+                INSERT INTO users (name, register_no, email, password, role, department_id, semester, fcm_token)
+                VALUES ('M. S. Ajaynath', 'MCA2024001', 'student@rit.ac.in', %s, 'Student', 1, 4, 'mock_student_fcm_token_12345')
+                ON DUPLICATE KEY UPDATE password=%s, fcm_token='mock_student_fcm_token_12345';
             """, (student_pass, student_pass))
+
+            # 6. Seed Classroom
+            cursor.execute("""
+                INSERT INTO classrooms (id, room_name, ssid, location)
+                VALUES (1, 'MCA Lab 101', 'CAMPUS_WIFI_SSID', 'Block A - Room 101')
+                ON DUPLICATE KEY UPDATE room_name='MCA Lab 101';
+            """)
+
+            # 7. Seed Subject
+            cursor.execute("""
+                INSERT INTO subjects (id, subject_name, subject_code, teacher_id, department_id, semester)
+                VALUES (1, 'Advanced Wireless Networks & Mobile Systems', 'MCA401', 2, 1, 4)
+                ON DUPLICATE KEY UPDATE subject_name='Advanced Wireless Networks & Mobile Systems';
+            """)
 
         connection.commit()
         print("Database seeded successfully with test accounts:")

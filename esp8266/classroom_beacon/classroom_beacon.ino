@@ -1,59 +1,31 @@
 #include <ESP8266WiFi.h>
+#include <ESP8266mDNS.h>
 
-// Classroom Details
-const char* ssid = "MCA_ROOM_101";
-const char* password = "attendance123";
+const char* ssid = "CAMPUS_WIFI_SSID";
+const char* password = "CAMPUS_WIFI_PASSWORD";
 
 void setup() {
-
   Serial.begin(115200);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
 
-  Serial.println();
-  Serial.println("================================");
-  Serial.println(" Classroom Beacon Starting...");
-  Serial.println("================================");
-
-  // ESP works only as Access Point
-  WiFi.mode(WIFI_AP);
-
-  bool result = WiFi.softAP(
-      ssid,
-      password,
-      6,      // Wi-Fi Channel
-      false,  // Hidden SSID? false = visible
-      50      // Maximum connected devices
-  );
-
-  if(result)
-  {
-      Serial.println("Access Point Started Successfully!");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
   }
-  else
-  {
-      Serial.println("Failed to Start AP");
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  if (MDNS.begin("esp8266-mca101")) {
+    MDNS.addService("attendance", "tcp", 80);
+    Serial.println("mDNS responder started: _attendance._tcp");
+  } else {
+    Serial.println("Error setting up MDNS responder!");
   }
-
-  Serial.print("SSID : ");
-  Serial.println(ssid);
-
-  Serial.print("Password : ");
-  Serial.println(password);
-
-  Serial.print("IP Address : ");
-  Serial.println(WiFi.softAPIP());
-
-  Serial.print("Channel : ");
-  Serial.println(WiFi.channel());
-
-  Serial.println("--------------------------------");
 }
 
-void loop()
-{
-    delay(5000);
-
-    Serial.println("Beacon Running...");
-
-    Serial.print("Connected Devices : ");
-    Serial.println(WiFi.softAPgetStationNum());
+void loop() {
+  MDNS.update();
 }

@@ -5,6 +5,7 @@ Provides Flask Blueprint for user authentication including unified login,
 role-specific login endpoints (Student, Teacher, Admin), and token profile verification.
 """
 
+# pyrefly: ignore [missing-import]
 from flask import Blueprint, request, jsonify, g
 from database.db import get_connection
 from utils.password import verify_password
