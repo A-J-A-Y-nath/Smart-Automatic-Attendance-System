@@ -2,4 +2,18 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    
+    <!-- Primary Brand Colors -->
+    <color name="md_theme_light_primary">#2563EB</color>
+    <color name="md_theme_light_onPrimary">#FFFFFF</color>
+    <color name="md_theme_light_primaryContainer">#DBEAFE</color>
+    <color name="md_theme_light_onPrimaryContainer">#1E3A8A</color>
+
+    <!-- Background Gradients (Light) -->
+    <color name="bg_gradient_start">#F8FAFC</color>
+    <color name="bg_gradient_end">#E2E8F0</color>
+
+    <!-- Glassmorphism Cards (Light) -->
+    <color name="glass_card_bg">#99FFFFFF</color>
+    <color name="glass_card_stroke">#33FFFFFF</color>
 </resources>

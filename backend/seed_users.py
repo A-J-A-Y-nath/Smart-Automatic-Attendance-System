@@ -48,11 +48,21 @@ def seed_database():
                 ON DUPLICATE KEY UPDATE room_name='MCA Lab 101';
             """)
 
-            # 7. Seed Subject
+            # 7. Seed Subjects for Teacher
             cursor.execute("""
                 INSERT INTO subjects (id, subject_name, subject_code, teacher_id, department_id, semester)
                 VALUES (1, 'Advanced Wireless Networks & Mobile Systems', 'MCA401', 2, 1, 4)
-                ON DUPLICATE KEY UPDATE subject_name='Advanced Wireless Networks & Mobile Systems';
+                ON DUPLICATE KEY UPDATE subject_name='Advanced Wireless Networks & Mobile Systems', teacher_id=2;
+            """)
+            cursor.execute("""
+                INSERT INTO subjects (id, subject_name, subject_code, teacher_id, department_id, semester)
+                VALUES (2, 'Internet of Things & Embedded Systems', 'MCA402', 2, 1, 4)
+                ON DUPLICATE KEY UPDATE subject_name='Internet of Things & Embedded Systems', teacher_id=2;
+            """)
+            cursor.execute("""
+                INSERT INTO subjects (id, subject_name, subject_code, teacher_id, department_id, semester)
+                VALUES (3, 'Cloud Computing Architecture', 'MCA403', 2, 1, 4)
+                ON DUPLICATE KEY UPDATE subject_name='Cloud Computing Architecture', teacher_id=2;
             """)
 
         connection.commit()

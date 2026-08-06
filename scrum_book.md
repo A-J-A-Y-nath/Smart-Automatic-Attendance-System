@@ -11,6 +11,9 @@
 - [Day 2: ESP8266 Microcontroller Hardware Beacon Implementation](#-day-2-esp8266-microcontroller-hardware-beacon-implementation)
 - [Day 3: Flask Backend Infrastructure, Security & Authentication Subsystem](#-day-3-flask-backend-infrastructure-security--authentication-subsystem)
 - [Day 4: Attendance Session Engine, FCM Dispatch & Web Testing Console](#-day-4-attendance-session-engine-fcm-dispatch--web-testing-console)
+- [Day 5: Android Application & Wi-Fi Beacon Scanner Integration](#-day-5-android-application--wi-fi-beacon-scanner-integration)
+- [Day 6: Full Admin Control Panel & Role-Separated CRUD Operations](#-day-6-full-admin-control-panel--role-separated-crud-operations)
+- [Day 7: Student Attendance Statistics & Live Teacher Roster Engine](#-day-7-student-attendance-statistics--live-teacher-roster-engine)
 - [Summary of Overall Progress & Metrics](#-summary-of-overall-progress--metrics)
 
 ---
@@ -112,7 +115,7 @@
 ---
 
 ## 📅 Day 4: Attendance Session Engine, FCM Dispatch & Web Testing Console
-**Date:** Current Phase  
+**Date:** Phase 4  
 **Sprint Milestone:** Real-Time Attendance Core & E2E Web Testing Console  
 
 ### 🎯 Objectives
@@ -148,16 +151,120 @@
 
 ---
 
-## 📊 Summary of Overall Progress & Metrics
+## 📅 Day 5: Android Application & Wi-Fi Beacon Scanner Integration
+**Date:** Phase 5  
+**Sprint Milestone:** Native Android Dashboards & Beacon Proximity Verification  
 
-| Module | Status | Highlights / Features |
-| :--- | :--- | :--- |
-| **Database** | ✅ 100% Complete | 7 relational tables, FK constraints, indexes, seeder script. |
-| **ESP8266 Hardware** | ✅ 100% Complete | AP beacon broadcasting (`MCA_ROOM_101`), mDNS service responder. |
-| **Backend Security** | ✅ 100% Complete | Salted scrypt password hashing, JWT tokens, RBAC decorators. |
-| **Attendance APIs** | ✅ 100% Complete | `/start-session` (FCM dispatch), `/mark-attendance` (Upsert). |
-| **Web Console** | ✅ 100% Complete | E2E automation runner, node visualizer, JSON inspector, event logger. |
-| **Android App** | ⏳ In Progress (Days 5-6) | Wi-Fi beacon scanner service & dashboard UI integration. |
+### 🎯 Objectives
+* Develop native Android UI with Material 3 Glassmorphism theme.
+* Implement hardware Wi-Fi scanner module to detect classroom beacon SSID/BSSID.
+* Synchronize active attendance sessions with live countdown timers.
+* Build quick-testing tools for rapid role switching on single test devices.
+
+### 🛠️ Work Completed
+1. **Native Android App Architecture ([`android/SmartAttendance`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance))**:
+   * [`ApiClient.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/ApiClient.java): Singleton OkHttp client with JWT bearer token auto-interceptor and main thread callback handler.
+   * [`PrefsHelper.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/PrefsHelper.java): Encapsulated SharedPreferences wrapper for token and role persistence.
+2. **Wi-Fi Beacon Proximity Scanner ([`WifiScanner.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/WifiScanner.java))**:
+   * Scans nearby Wi-Fi access points via Android `WifiManager`. Matches detected SSIDs against active classroom beacon (`MCA_ROOM_101`).
+3. **Student & Teacher Dashboards**:
+   * [`StudentDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/StudentDashboardActivity.java): Live active session status, 5-minute countdown timer, and "Scan Wi-Fi" button.
+   * [`TeacherDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/TeacherDashboardActivity.java): Subject selector spinner, classroom ID input, start session button, and stop/cancel session button.
+4. **Bug Fixes & Synchronization Hardening**:
+   * Resolved race condition between `onResume` and subject fetching by chaining `checkActiveSession()` to trigger strictly after `loadTeacherSubjects()` succeeds.
+   * Cleared 11 historical "ghost" sessions with `NULL` `end_time` values.
+
+### 🧪 Verification & Outcome
+* Verified end-to-end attendance flow on physical Android device: Teacher starts session -> Student scans Wi-Fi -> Beacon detected -> Attendance marked -> DB updated to `PRESENT`.
+
+### 📁 Artifacts Produced
+* [`StudentDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/StudentDashboardActivity.java)
+* [`TeacherDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/TeacherDashboardActivity.java)
+* [`WifiScanner.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/WifiScanner.java)
 
 ---
-*Scrum Log last updated for Day 4 completion.*
+
+## 📅 Day 6: Full Admin Control Panel & Role-Separated CRUD Operations
+**Date:** Phase 6  
+**Sprint Milestone:** Complete System Administration & Data Management  
+
+### 🎯 Objectives
+* Implement complete REST API CRUD space for Administrators (`/api/admin/*`).
+* Design an intuitive, role-separated Admin Dashboard UI in Android.
+* Provide interactive Edit and Delete options for Users, Subjects, and Classrooms.
+* Add global data refresh capabilities.
+
+### 🛠️ Work Completed
+1. **Backend Admin CRUD Routes ([`backend/routes/admin.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/admin.py))**:
+   * User endpoints: `GET /api/admin/users?role=Student|Teacher|Admin`, `POST /api/admin/users`, `PUT /api/admin/users/<id>`, `DELETE /api/admin/users/<id>`.
+   * Subject endpoints: `GET /api/admin/subjects`, `POST /api/admin/subjects`, `PUT /api/admin/subjects/<id>`, `DELETE /api/admin/subjects/<id>`.
+   * Classroom endpoints: `GET /api/admin/classrooms`, `POST /api/admin/classrooms`, `PUT /api/admin/classrooms/<id>`, `DELETE /api/admin/classrooms/<id>`.
+   * Session & Attendance endpoints: `GET /api/admin/sessions`, `POST /api/admin/sessions/start`, `POST /api/admin/sessions/<id>/stop`, `GET /api/admin/attendance`.
+2. **Android Admin Control Panel ([`AdminDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/AdminDashboardActivity.java))**:
+   * Created 7 glassmorphic cards: **Students**, **Teachers**, **Administrators**, **Subjects**, **Classrooms**, **Sessions**, and **Attendance Logs**.
+   * Added dedicated `+ Add` and `Edit` buttons per role card.
+   * **Direct Long-Press Multi-Select Delete**: Long-pressing any subject, classroom, or user card directly opens the multi-select checkbox list with no dialog heading or intermediate 2-options popup (`showMultiSelectDeleteUsersDialog`).
+   * Top-Bar **Refresh Button**: Instantly re-fetches all 7 dashboard data streams.
+
+### 🧪 Verification & Outcome
+* All CRUD operations (Create, Read, Update, Delete) verified via Python automated scripts and manual Android testing. Invalid operations and email duplicates properly handled.
+
+### 📁 Artifacts Produced
+* [`backend/routes/admin.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/admin.py)
+* [`AdminDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/AdminDashboardActivity.java)
+* [`activity_admin_dashboard.xml`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/res/layout/activity_admin_dashboard.xml)
+
+---
+
+## 📅 Day 7: Student Attendance Statistics & Live Teacher Roster Engine
+**Date:** Phase 7 (Current)  
+**Sprint Milestone:** Real-Time Attendance Roster & Student Performance Metrics  
+
+### 🎯 Objectives
+* Implement student attendance statistics calculation engine.
+* Implement live present-students roster polling for faculty active sessions.
+* Enhance student and teacher dashboard layouts with data visualization elements.
+
+### 🛠️ Work Completed
+1. **Backend Analytics Endpoints**:
+   * Endpoint `GET /api/student/my-stats` ([`routes/student.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/student.py)): Returns overall attendance percentage, total present count, total absent count, and per-subject breakdown stats.
+   * Endpoint `GET /api/teacher/active-roster` ([`routes/teacher.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/teacher.py)): Queries current active session and returns a live roster of present students with check-in timestamps.
+2. **Student Dashboard Statistics UI ([`StudentDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/StudentDashboardActivity.java))**:
+   * Added Overall Percentage headline circle, present/absent summary numbers, and horizontal progress bars.
+   * Dynamic per-subject breakdown list with individual percentage progress indicators.
+3. **Teacher Dashboard Live Roster UI ([`TeacherDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/TeacherDashboardActivity.java))**:
+   * Added "Live Present Students" roster card displaying real-time student count badge (`Count: X`) and detailed check-in roster.
+
+### 🧪 Verification & Outcome
+* Tested analytics calculations: Student stats verified returning accurate `38.1%` overall attendance across active courses.
+* Teacher live roster tested: Real-time student check-ins instantly populate on faculty screen.
+
+### 📁 Artifacts Produced
+* [`routes/student.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/student.py)
+* [`routes/teacher.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/teacher.py)
+* [`StudentDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/StudentDashboardActivity.java)
+* [`TeacherDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/TeacherDashboardActivity.java)
+
+---
+
+## 📊 Summary of Overall Progress & Metrics
+
+![Progress](https://geps.dev/progress/85?dangerColor=8b0000&warningColor=fe8019&successColor=22c55e)
+
+```
+[██████████████████████████████████████████████████░░░░░░░░░] 85% Overall System Completion
+```
+
+| Module | Status | Visual Progress | Highlights / Features |
+| :--- | :--- | :--- | :--- |
+| **Database** | ✅ 100% Complete | `██████████` | 7 relational tables, FK constraints, indexes, seeder script. |
+| **ESP8266 Hardware** | ✅ 100% Complete | `██████████` | AP beacon broadcasting (`MCA_ROOM_101`), mDNS service responder. |
+| **Backend Security** | ✅ 100% Complete | `██████████` | Salted scrypt password hashing, JWT tokens, RBAC decorators. |
+| **Attendance APIs** | ✅ 100% Complete | `██████████` | `/start-session`, `/mark-attendance`, `/my-stats`, `/active-roster`. |
+| **Admin System** | ✅ 100% Complete | `██████████` | Full CRUD for Users, Subjects, Classrooms; Long-Press Delete; Refresh button. |
+| **Web Console** | ✅ 100% Complete | `██████████` | E2E automation runner, node visualizer, JSON inspector, event logger. |
+| **Android App** | ✅ 100% Complete | `██████████` | Student, Teacher, Admin dashboards, Wi-Fi scanner, live roster, stats bars. |
+
+---
+*Scrum Log last updated for Day 7 completion.*
+

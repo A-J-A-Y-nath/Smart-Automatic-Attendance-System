@@ -9,6 +9,15 @@ ENV/
 env/
 .env
 
+# Secrets & Private Credentials
+firebase_credentials.json
+firebase_service_account.json
+google-services.json
+*.pem
+*.key
+*.jks
+*.keystore
+
 # Android Studio / Gradle
 .gradle/
 build/
@@ -17,12 +26,15 @@ captures/
 .cxx/
 *.apk
 *.aar
+local.properties
 
 # IDE & Editor
 .idea/
 .vscode/
 *.swp
 *.bak
+.DS_Store
+*.log
 
 # Antigravity artifacts
 brain/
