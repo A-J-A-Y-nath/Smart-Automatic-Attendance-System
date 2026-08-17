@@ -98,34 +98,34 @@ public class TeacherDashboardActivity extends AppCompatActivity {
             Toast.makeText(this, "Refreshed status", Toast.LENGTH_SHORT).show();
         });
 
-        Button btnSwitch = findViewById(R.id.btnSwitch);
-        if (btnSwitch != null) {
-            btnSwitch.setOnClickListener(v -> {
-                progressBar.setVisibility(View.VISIBLE);
-                ApiClient.getInstance(this).login("/api/auth/student/login", "student@rit.ac.in", "StudentPass@123", new ApiClient.ApiCallback() {
-                    @Override
-                    public void onSuccess(JSONObject response) {
-                        progressBar.setVisibility(View.GONE);
-                        try {
-                            String token = response.getString("access_token");
-                            prefsHelper.saveJwtToken(token);
-                            prefsHelper.saveUserRole("Student");
-                            if (sessionTimer != null) sessionTimer.cancel();
-                            startActivity(new Intent(TeacherDashboardActivity.this, StudentDashboardActivity.class));
-                            finish();
-                        } catch (JSONException e) {
-                            Toast.makeText(TeacherDashboardActivity.this, "Error switching role", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-
-                    @Override
-                    public void onError(String errorMessage) {
-                        progressBar.setVisibility(View.GONE);
-                        Toast.makeText(TeacherDashboardActivity.this, "Failed to switch: " + errorMessage, Toast.LENGTH_SHORT).show();
-                    }
-                });
-            });
-        }
+//        Button btnSwitch = findViewById(R.id.btnSwitch);
+//        if (btnSwitch != null) {
+//            btnSwitch.setOnClickListener(v -> {
+//                progressBar.setVisibility(View.VISIBLE);
+//                ApiClient.getInstance(this).login("/api/auth/student/login", "student@rit.ac.in", "StudentPass@123", new ApiClient.ApiCallback() {
+//                    @Override
+//                    public void onSuccess(JSONObject response) {
+//                        progressBar.setVisibility(View.GONE);
+//                        try {
+//                            String token = response.getString("access_token");
+//                            prefsHelper.saveJwtToken(token);
+//                            prefsHelper.saveUserRole("Student");
+//                            if (sessionTimer != null) sessionTimer.cancel();
+//                            startActivity(new Intent(TeacherDashboardActivity.this, StudentDashboardActivity.class));
+//                            finish();
+//                        } catch (JSONException e) {
+//                            Toast.makeText(TeacherDashboardActivity.this, "Error switching role", Toast.LENGTH_SHORT).show();
+//                        }
+//                    }
+//
+//                    @Override
+//                    public void onError(String errorMessage) {
+//                        progressBar.setVisibility(View.GONE);
+//                        Toast.makeText(TeacherDashboardActivity.this, "Failed to switch: " + errorMessage, Toast.LENGTH_SHORT).show();
+//                    }
+//                });
+//            });
+//        }
 
         btnStartSession.setOnClickListener(v -> startSession());
         btnStopSession.setOnClickListener(v -> stopSession());

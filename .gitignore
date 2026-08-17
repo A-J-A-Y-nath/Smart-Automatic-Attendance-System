@@ -27,6 +27,8 @@ captures/
 *.apk
 *.aar
 local.properties
+jdk17/
+jdk17.zip
 
 # IDE & Editor
 .idea/

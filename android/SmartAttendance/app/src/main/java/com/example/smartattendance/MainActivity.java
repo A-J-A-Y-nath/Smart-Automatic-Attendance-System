@@ -71,30 +71,30 @@ public class MainActivity extends AppCompatActivity {
 
         btnLogin.setOnClickListener(v -> performLogin());
 
-        MaterialButton btnTestStudent = findViewById(R.id.btnTestStudent);
-        MaterialButton btnTestTeacher = findViewById(R.id.btnTestTeacher);
+//        MaterialButton btnTestStudent = findViewById(R.id.btnTestStudent);
+//        MaterialButton btnTestTeacher = findViewById(R.id.btnTestTeacher);
 
-        btnTestStudent.setOnClickListener(v -> {
-            etEmail.setText("student@rit.ac.in");
-            etPassword.setText("StudentPass@123");
-            rgRole.check(R.id.rbStudent);
-            performLogin();
-        });
+//        btnTestStudent.setOnClickListener(v -> {
+//            etEmail.setText("student@rit.ac.in");
+//            etPassword.setText("StudentPass@123");
+//            rgRole.check(R.id.rbStudent);
+//            performLogin();
+//        });
 
-        btnTestTeacher.setOnClickListener(v -> {
-            etEmail.setText("teacher@rit.ac.in");
-            etPassword.setText("TeacherPass@123");
-            rgRole.check(R.id.rbTeacher);
-            performLogin();
-        });
-
-        MaterialButton btnTestAdmin = findViewById(R.id.btnTestAdmin);
-        btnTestAdmin.setOnClickListener(v -> {
-            etEmail.setText("admin@rit.ac.in");
-            etPassword.setText("AdminPass@123");
-            rgRole.check(R.id.rbAdmin);
-            performLogin();
-        });
+//        btnTestTeacher.setOnClickListener(v -> {
+//            etEmail.setText("teacher@rit.ac.in");
+//            etPassword.setText("TeacherPass@123");
+//            rgRole.check(R.id.rbTeacher);
+//            performLogin();
+//        });
+//
+//        MaterialButton btnTestAdmin = findViewById(R.id.btnTestAdmin);
+//        btnTestAdmin.setOnClickListener(v -> {
+//            etEmail.setText("admin@rit.ac.in");
+//            etPassword.setText("AdminPass@123");
+//            rgRole.check(R.id.rbAdmin);
+//            performLogin();
+//        });
     }
 
     private void performLogin() {

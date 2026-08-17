@@ -77,35 +77,35 @@ public class StudentDashboardActivity extends AppCompatActivity {
             fetchMyStats();
             Toast.makeText(this, "Refreshed status", Toast.LENGTH_SHORT).show();
         });
+// it is for switching now not needed it is used for testing purpose
+//        Button btnSwitch = findViewById(R.id.btnSwitch);
+//        if (btnSwitch != null) {
+//            btnSwitch.setOnClickListener(v -> {
+//                progressBar.setVisibility(View.VISIBLE);
+//                ApiClient.getInstance(this).login("/api/auth/teacher/login", "teacher@rit.ac.in", "TeacherPass@123", new ApiClient.ApiCallback() {
+//                    @Override
+//                    public void onSuccess(JSONObject response) {
+//                        progressBar.setVisibility(View.GONE);
+//                        try {
+//                            String token = response.getString("access_token");
+//                            prefsHelper.saveJwtToken(token);
+//                            prefsHelper.saveUserRole("Teacher");
+//                            if (studentTimer != null) studentTimer.cancel();
+//                            startActivity(new Intent(StudentDashboardActivity.this, TeacherDashboardActivity.class));
+//                            finish();
+//                        } catch (JSONException e) {
+//                            Toast.makeText(StudentDashboardActivity.this, "Error switching role", Toast.LENGTH_SHORT).show();
+//                        }
+//                    }
 
-        Button btnSwitch = findViewById(R.id.btnSwitch);
-        if (btnSwitch != null) {
-            btnSwitch.setOnClickListener(v -> {
-                progressBar.setVisibility(View.VISIBLE);
-                ApiClient.getInstance(this).login("/api/auth/teacher/login", "teacher@rit.ac.in", "TeacherPass@123", new ApiClient.ApiCallback() {
-                    @Override
-                    public void onSuccess(JSONObject response) {
-                        progressBar.setVisibility(View.GONE);
-                        try {
-                            String token = response.getString("access_token");
-                            prefsHelper.saveJwtToken(token);
-                            prefsHelper.saveUserRole("Teacher");
-                            if (studentTimer != null) studentTimer.cancel();
-                            startActivity(new Intent(StudentDashboardActivity.this, TeacherDashboardActivity.class));
-                            finish();
-                        } catch (JSONException e) {
-                            Toast.makeText(StudentDashboardActivity.this, "Error switching role", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-
-                    @Override
-                    public void onError(String errorMessage) {
-                        progressBar.setVisibility(View.GONE);
-                        Toast.makeText(StudentDashboardActivity.this, "Failed to switch: " + errorMessage, Toast.LENGTH_SHORT).show();
-                    }
-                });
-            });
-        }
+//                    @Override
+//                    public void onError(String errorMessage) {
+//                        progressBar.setVisibility(View.GONE);
+//                        Toast.makeText(StudentDashboardActivity.this, "Failed to switch: " + errorMessage, Toast.LENGTH_SHORT).show();
+//                    }
+//                });
+//            });
+//        }
 
         btnScan.setOnClickListener(v -> startScanning());
 

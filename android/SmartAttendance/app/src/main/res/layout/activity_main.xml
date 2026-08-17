@@ -104,36 +104,36 @@
             android:orientation="horizontal"
             android:weightSum="3">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnTestStudent"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="4dp"
-                android:text="Test Student"
-                android:textSize="11sp" />
+<!--            <com.google.android.material.button.MaterialButton-->
+<!--                android:id="@+id/btnTestStudent"-->
+<!--                style="@style/Widget.Material3.Button.OutlinedButton"-->
+<!--                android:layout_width="0dp"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:layout_weight="1"-->
+<!--                android:layout_marginEnd="4dp"-->
+<!--                android:text="Test Student"-->
+<!--                android:textSize="11sp" />-->
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnTestTeacher"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="4dp"
-                android:layout_marginEnd="4dp"
-                android:text="Test Teacher"
-                android:textSize="11sp" />
+<!--            <com.google.android.material.button.MaterialButton-->
+<!--                android:id="@+id/btnTestTeacher"-->
+<!--                style="@style/Widget.Material3.Button.OutlinedButton"-->
+<!--                android:layout_width="0dp"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:layout_weight="1"-->
+<!--                android:layout_marginStart="4dp"-->
+<!--                android:layout_marginEnd="4dp"-->
+<!--                android:text="Test Teacher"-->
+<!--                android:textSize="11sp" />-->
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnTestAdmin"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="4dp"
-                android:text="Test Admin"
-                android:textSize="11sp" />
+<!--            <com.google.android.material.button.MaterialButton-->
+<!--                android:id="@+id/btnTestAdmin"-->
+<!--                style="@style/Widget.Material3.Button.OutlinedButton"-->
+<!--                android:layout_width="0dp"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:layout_weight="1"-->
+<!--                android:layout_marginStart="4dp"-->
+<!--                android:text="Test Admin"-->
+<!--                android:textSize="11sp" />-->
         </LinearLayout>
 
     </LinearLayout>

@@ -2,18 +2,32 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    
-    <!-- Primary Brand Colors -->
-    <color name="md_theme_light_primary">#2563EB</color>
+
+    <!-- Primary Brand Colors (Green like the design) -->
+    <color name="md_theme_light_primary">#1B8B3E</color>
     <color name="md_theme_light_onPrimary">#FFFFFF</color>
-    <color name="md_theme_light_primaryContainer">#DBEAFE</color>
-    <color name="md_theme_light_onPrimaryContainer">#1E3A8A</color>
+    <color name="md_theme_light_primaryContainer">#C8F0D4</color>
+    <color name="md_theme_light_onPrimaryContainer">#0A4A1F</color>
 
-    <!-- Background Gradients (Light) -->
-    <color name="bg_gradient_start">#F8FAFC</color>
-    <color name="bg_gradient_end">#E2E8F0</color>
+    <!-- Dark Navy Toolbar -->
+    <color name="toolbar_bg">#1A2340</color>
+    <color name="toolbar_text">#FFFFFF</color>
 
-    <!-- Glassmorphism Cards (Light) -->
-    <color name="glass_card_bg">#99FFFFFF</color>
-    <color name="glass_card_stroke">#33FFFFFF</color>
+    <!-- Background (Clean white like the mockup) -->
+    <color name="bg_gradient_start">#F4F6FA</color>
+    <color name="bg_gradient_end">#E8EDF5</color>
+
+    <!-- Cards (White clean cards) -->
+    <color name="glass_card_bg">#FFFFFFFF</color>
+    <color name="glass_card_stroke">#E2E8F0</color>
+
+    <!-- Status Colors -->
+    <color name="live_badge_bg">#E8F5E9</color>
+    <color name="live_badge_text">#1B8B3E</color>
+    <color name="present_green">#1B8B3E</color>
+    <color name="absent_red">#E53935</color>
+    <color name="text_primary">#1A2340</color>
+    <color name="text_secondary">#6B7A99</color>
+    <color name="divider_color">#E8EDF5</color>
+    <color name="scan_button_bg">#1B8B3E</color>
 </resources>

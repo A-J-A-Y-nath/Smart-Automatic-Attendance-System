@@ -25,11 +25,29 @@ android {
             )
         }
     }
+
+    flavorDimensions += "version"
+    productFlavors {
+        create("prod") {
+            dimension = "version"
+            applicationId = "com.example.smartattendance"
+            versionNameSuffix = ""
+            resValue("string", "app_name", "Smart Attendance")
+        }
+        create("dev") {
+            dimension = "version"
+            applicationId = "com.example.smartattendance.dev"
+            versionNameSuffix = "-dev"
+            resValue("string", "app_name", "SmartAtt [DEV]")
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
 }
+
 
 dependencies {
 
