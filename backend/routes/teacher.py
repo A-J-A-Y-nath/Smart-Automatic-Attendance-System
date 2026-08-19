@@ -80,6 +80,12 @@ def start_attendance_session():
             "UPDATE attendance_sessions SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND end_time IS NOT NULL AND end_time <= %s",
             (now,)
         )
+        
+        # Close any active session for this teacher for OTHER subjects
+        cursor.execute(
+            "UPDATE attendance_sessions SET status = 'CLOSED', end_time = %s WHERE teacher_id = %s AND subject_id != %s AND status = 'ACTIVE'",
+            (now, teacher_id, subject_id)
+        )
         conn.commit()
 
         # Check if an ACTIVE session already exists for this teacher & subject

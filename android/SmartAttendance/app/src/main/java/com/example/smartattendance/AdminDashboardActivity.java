@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.text.InputType;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -63,8 +64,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
         tvSessionsList = findViewById(R.id.tvSessionsList);
         tvAttendanceList = findViewById(R.id.tvAttendanceList);
 
-        MaterialButton btnLogout = findViewById(R.id.btnLogout);
-        MaterialButton btnRefresh = findViewById(R.id.btnRefresh);
+        Button btnLogout = findViewById(R.id.btnLogout);
+        Button btnRefresh = findViewById(R.id.btnRefresh);
 
         if (btnRefresh != null) {
             btnRefresh.setOnClickListener(v -> {

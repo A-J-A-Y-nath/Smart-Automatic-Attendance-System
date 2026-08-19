@@ -270,6 +270,11 @@ public class TeacherDashboardActivity extends AppCompatActivity {
                 long sec = (millisUntilFinished / 1000) % 60;
                 String timeStr = String.format(Locale.getDefault(), "%02d:%02d", min, sec);
                 tvTimerStatus.setText("SESSION ACTIVE\n" + subjectName + "\nTime Left: " + timeStr);
+                
+                // Fetch live roster every 5 seconds to keep present students list up to date
+                if (sec % 5 == 0) {
+                    fetchActiveRoster();
+                }
             }
 
             @Override

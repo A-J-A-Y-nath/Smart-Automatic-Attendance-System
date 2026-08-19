@@ -209,7 +209,7 @@ def get_my_stats():
             JOIN subjects sub ON s.subject_id = sub.id
             LEFT JOIN attendance_records ar
                 ON ar.session_id = s.id AND ar.student_id = %s
-            WHERE s.status IN ('CLOSED', 'EXPIRED')
+            WHERE s.status IN ('ACTIVE', 'CLOSED', 'EXPIRED')
               AND sub.id IN (
                   SELECT DISTINCT s2.subject_id
                   FROM attendance_sessions s2
