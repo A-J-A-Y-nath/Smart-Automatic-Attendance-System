@@ -22,14 +22,14 @@ def home():
     try:
         connection = get_connection()
         with connection.cursor() as cursor:
-            cursor.execute("SELECT DATABASE();")
+            cursor.execute("SELECT current_database();")
             result = cursor.fetchone()
         connection.close()
 
         return jsonify({
             "status": "success",
             "system": "Smart Automatic Attendance System Backend API",
-            "database_connected": result.get("DATABASE()") if result else None
+            "database_connected": result.get("current_database") if result else None
         }), 200
 
     except Exception as e:

@@ -1,15 +1,48 @@
-# Python
+# ==========================================
+# Smart Automatic Attendance System - Git Ignore
+# ==========================================
+
+# ------------------------------------------
+# Python & Flask Backend
+# ------------------------------------------
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
 venv/
+venv*/
 ENV/
 env/
-.env
+.venv/
 
-# Secrets & Private Credentials
+# Environment Variables & Local Config
+.env
+.env.*
+!.env.example
+instance/
+.webassets-cache
+
+# ------------------------------------------
+# Secrets, Keys & Private Credentials
+# ------------------------------------------
 firebase_credentials.json
 firebase_service_account.json
 google-services.json
@@ -17,27 +50,60 @@ google-services.json
 *.key
 *.jks
 *.keystore
+*.p12
 
-# Android Studio / Gradle
+# ------------------------------------------
+# Android & Gradle
+# ------------------------------------------
 .gradle/
-build/
+**/build/
 captures/
 .externalNativeBuild/
 .cxx/
 *.apk
+*.aab
 *.aar
 local.properties
 jdk17/
 jdk17.zip
 
-# IDE & Editor
+# ------------------------------------------
+# IDE & Text Editors
+# ------------------------------------------
 .idea/
 .vscode/
+*.iml
+.project
+.classpath
+.settings/
 *.swp
+*.swo
+*~
 *.bak
-.DS_Store
-*.log
 
-# Antigravity artifacts
+# ------------------------------------------
+# Operating System & System Files
+# ------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ------------------------------------------
+# Logs & Temporary Files
+# ------------------------------------------
+*.log
+logs/
+*.tmp
+
+# ------------------------------------------
+# Antigravity & Agent Artifacts
+# ------------------------------------------
 brain/
 scratch/
+.gemini/
+.agents/

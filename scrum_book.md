@@ -14,6 +14,8 @@
 - [Day 5: Android Application & Wi-Fi Beacon Scanner Integration](#-day-5-android-application--wi-fi-beacon-scanner-integration)
 - [Day 6: Full Admin Control Panel & Role-Separated CRUD Operations](#-day-6-full-admin-control-panel--role-separated-crud-operations)
 - [Day 7: Student Attendance Statistics & Live Teacher Roster Engine](#-day-7-student-attendance-statistics--live-teacher-roster-engine)
+- [Day 8: Cloud Database Migration to Neon PostgreSQL](#-day-8-cloud-database-migration-to-neon-postgresql)
+- [Upcoming Sprints & Next Tasks](#-upcoming-sprints--next-tasks)
 - [Summary of Overall Progress & Metrics](#-summary-of-overall-progress--metrics)
 
 ---
@@ -40,7 +42,7 @@
    * **`attendance_records`**: Stores student attendance status (`PRESENT`/`ABSENT`) with unique constraints (`session_id`, `student_id`) to enforce single-entry integrity.
 
 ### 🧪 Verification & Outcome
-* Executed MySQL schema creation script (`schema.sql`). All foreign key constraints, indexes, and unique constraints verified cleanly on MySQL 8.0.
+* Executed MySQL schema creation script (`schema.sql`). All foreign key constraints, indexes, and unique constraints verified cleanly.
 
 ### 📁 Artifacts Produced
 * [`database/schema.sql`](file:///e:/Smart-Automatic-Attendance-System/database/schema.sql)
@@ -87,7 +89,7 @@
 ### 🛠️ Work Completed
 1. **Modular Architecture Setup (`backend/`)**:
    * Organized code into `routes/`, `middleware/`, `database/`, and `utils/`.
-   * Created [`database/db.py`](file:///e:/Smart-Automatic-Attendance-System/backend/database/db.py) using `PyMySQL` connection pooling.
+   * Created [`database/db.py`](file:///e:/Smart-Automatic-Attendance-System/backend/database/db.py) database connection pool.
 2. **Cryptographic Security Implementation**:
    * **Password Hashing ([`utils/password.py`](file:///e:/Smart-Automatic-Attendance-System/backend/utils/password.py))**: Used `Werkzeug.security` with salted `scrypt`/`pbkdf2` algorithms.
    * **JWT Security Handler ([`utils/jwt_handler.py`](file:///e:/Smart-Automatic-Attendance-System/backend/utils/jwt_handler.py))**: Encodes and decodes signed JWT bearer tokens with expiration handling.
@@ -129,13 +131,13 @@
    * Endpoint `POST /api/teacher/start-session`: Inserts an active record into `attendance_sessions` and triggers high-priority Firebase multicast push notifications (`firebase_admin.messaging`) to enrolled student devices.
    * Endpoint `GET /api/teacher/health`: Health check for faculty route space.
 2. **Student Attendance Marking Engine ([`routes/student.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/student.py))**:
-   * Endpoint `POST /api/student/mark-attendance`: Validates that the targeted session is `ACTIVE`, then records `PRESENT` status into `attendance_records` using `ON DUPLICATE KEY UPDATE` to guarantee idempotency.
+   * Endpoint `POST /api/student/mark-attendance`: Validates that the targeted session is `ACTIVE`, then records `PRESENT` status into `attendance_records` with single-entry integrity.
 3. **Web Integration & Testing Console (`web/`)**:
    * Created **[`index.html`](file:///e:/Smart-Automatic-Attendance-System/web/index.html)**: Clean responsive UI with font integration (`Outfit`, `JetBrains Mono`) and FontAwesome icons.
    * Created **[`style.css`](file:///e:/Smart-Automatic-Attendance-System/web/style.css)**: Glassmorphism theme, custom pulse animations, network latency badges, and status pills.
    * Created **[`app.js`](file:///e:/Smart-Automatic-Attendance-System/web/app.js)**: Features automated End-to-End (E2E) flow execution, real-time node animation, JSON payload viewer, and interactive HTTP network logger.
 4. **Integration Test Suite ([`test_attendance_overhaul.py`](file:///e:/Smart-Automatic-Attendance-System/backend/test_attendance_overhaul.py))**:
-   * Implemented mocks for MySQL connections and Firebase messaging to test endpoint behavior in isolation.
+   * Implemented mocks for database connections and Firebase messaging to test endpoint behavior in isolation.
 
 ### 🧪 Verification & Outcome
 * Automated E2E test button on Web Console successfully completes full workflow: Ping Server -> Teacher Login -> Start Session -> Push Dispatch -> Mark Attendance -> 100% Success.
@@ -172,7 +174,7 @@
    * [`TeacherDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/TeacherDashboardActivity.java): Subject selector spinner, classroom ID input, start session button, and stop/cancel session button.
 4. **Bug Fixes & Synchronization Hardening**:
    * Resolved race condition between `onResume` and subject fetching by chaining `checkActiveSession()` to trigger strictly after `loadTeacherSubjects()` succeeds.
-   * Cleared 11 historical "ghost" sessions with `NULL` `end_time` values.
+   * Cleared historical "ghost" sessions with `NULL` `end_time` values.
 
 ### 🧪 Verification & Outcome
 * Verified end-to-end attendance flow on physical Android device: Teacher starts session -> Student scans Wi-Fi -> Beacon detected -> Attendance marked -> DB updated to `PRESENT`.
@@ -203,7 +205,7 @@
 2. **Android Admin Control Panel ([`AdminDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/AdminDashboardActivity.java))**:
    * Created 7 glassmorphic cards: **Students**, **Teachers**, **Administrators**, **Subjects**, **Classrooms**, **Sessions**, and **Attendance Logs**.
    * Added dedicated `+ Add` and `Edit` buttons per role card.
-   * **Direct Long-Press Multi-Select Delete**: Long-pressing any subject, classroom, or user card directly opens the multi-select checkbox list with no dialog heading or intermediate 2-options popup (`showMultiSelectDeleteUsersDialog`).
+   * **Direct Long-Press Multi-Select Delete**: Long-pressing any subject, classroom, or user card directly opens the multi-select checkbox list.
    * Top-Bar **Refresh Button**: Instantly re-fetches all 7 dashboard data streams.
 
 ### 🧪 Verification & Outcome
@@ -217,7 +219,7 @@
 ---
 
 ## 📅 Day 7: Student Attendance Statistics & Live Teacher Roster Engine
-**Date:** Phase 7 (Current)  
+**Date:** Phase 7  
 **Sprint Milestone:** Real-Time Attendance Roster & Student Performance Metrics  
 
 ### 🎯 Objectives
@@ -227,8 +229,8 @@
 
 ### 🛠️ Work Completed
 1. **Backend Analytics Endpoints**:
-   * Endpoint `GET /api/student/my-stats` ([`routes/student.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/student.py)): Returns overall attendance percentage, total present count, total absent count, and per-subject breakdown stats.
-   * Endpoint `GET /api/teacher/active-roster` ([`routes/teacher.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/teacher.py)): Queries current active session and returns a live roster of present students with check-in timestamps.
+   * Endpoint `GET /api/student/my-stats`: Returns overall attendance percentage, total present count, total absent count, and per-subject breakdown stats.
+   * Endpoint `GET /api/teacher/active-roster`: Queries current active session and returns a live roster of present students with check-in timestamps.
 2. **Student Dashboard Statistics UI ([`StudentDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/StudentDashboardActivity.java))**:
    * Added Overall Percentage headline circle, present/absent summary numbers, and horizontal progress bars.
    * Dynamic per-subject breakdown list with individual percentage progress indicators.
@@ -242,22 +244,86 @@
 ### 📁 Artifacts Produced
 * [`routes/student.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/student.py)
 * [`routes/teacher.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/teacher.py)
-* [`StudentDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/StudentDashboardActivity.java)
-* [`TeacherDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/TeacherDashboardActivity.java)
+
+---
+
+## 📅 Day 8: Cloud Database Migration to Neon PostgreSQL
+**Date:** Phase 8  
+**Sprint Milestone:** Serverless Cloud Database Architecture & `psycopg2` Migration  
+
+### 🎯 Objectives
+* Migrate database tier from local MySQL to free cloud-hosted serverless **Neon PostgreSQL**.
+* Refactor database connections, schema DDL, query syntax, and primary key identity sequence handling.
+* Ensure zero breaking changes for the Android mobile application.
+
+### 🛠️ Work Completed
+1. **Schema DDL Migration ([`database/schema.sql`](file:///e:/Smart-Automatic-Attendance-System/database/schema.sql))**:
+   * Converted `INT AUTO_INCREMENT` to `SERIAL PRIMARY KEY`.
+   * Converted `DATETIME` to `TIMESTAMP`.
+   * Replaced column ENUMs with native PostgreSQL ENUM types (`user_role`, `session_status`, `attendance_status`).
+2. **Database Driver Refactoring ([`backend/database/db.py`](file:///e:/Smart-Automatic-Attendance-System/backend/database/db.py))**:
+   * Replaced `pymysql` with `psycopg2-binary`.
+   * Configured `cursor_factory=RealDictCursor` for dictionary key-value output.
+   * Added `sslmode=require` and connection retries for cloud pooler resilience.
+3. **Primary Key Retrieval & Exception Handling ([`routes/admin.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/admin.py), [`routes/teacher.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/teacher.py))**:
+   * Replaced MySQL `cursor.lastrowid` with `INSERT ... RETURNING id` and `cursor.fetchone()['id']`.
+   * Expanded duplicate key exception checks to handle PostgreSQL constraint errors (`"duplicate key"` / `"unique constraint"`).
+4. **Data Seeding & Sequence Sync ([`backend/seed_users.py`](file:///e:/Smart-Automatic-Attendance-System/backend/seed_users.py))**:
+   * Replaced `INSERT IGNORE` and `ON DUPLICATE KEY UPDATE` with PostgreSQL `ON CONFLICT (...) DO NOTHING` / `DO UPDATE`.
+   * Added `setval` sequence synchronization to prevent primary key collisions after explicit seeding.
+
+### 🧪 Verification & Outcome
+* Database successfully seeded on Neon PostgreSQL.
+* Automated E2E Auth Test Suite (`test_auth_api.py`) achieved 100% pass rate (7/7 tests passed).
+* Unit Test Suite (`test_attendance_overhaul.py`) achieved 100% pass rate (5/5 tests passed).
+
+### 📁 Artifacts Produced
+* [`database/schema.sql`](file:///e:/Smart-Automatic-Attendance-System/database/schema.sql)
+* [`backend/database/db.py`](file:///e:/Smart-Automatic-Attendance-System/backend/database/db.py)
+* [`backend/app.py`](file:///e:/Smart-Automatic-Attendance-System/backend/app.py)
+* [`backend/seed_users.py`](file:///e:/Smart-Automatic-Attendance-System/backend/seed_users.py)
+* [`backend/routes/admin.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/admin.py)
+* [`backend/routes/teacher.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/teacher.py)
+* [`backend/test_attendance_overhaul.py`](file:///e:/Smart-Automatic-Attendance-System/backend/test_attendance_overhaul.py)
+
+---
+
+## 🎯 Upcoming Sprints & Next Tasks
+
+### 🚀 Sprint Task 1: Hosting Backend Online (Render / Vercel)
+* **Goal**: Deploy Flask REST API to cloud platform (Render / Vercel / Railway) with HTTPS/SSL.
+* **Deliverables**:
+  1. Production cloud deployment with environment variable bindings (`DATABASE_URL`, `JWT_SECRET`).
+  2. Public API HTTPS endpoint.
+  3. Update Android `ApiClient.java` `BASE_URL` to live cloud domain.
+
+### 🔔 Sprint Task 2: Firebase Cloud Messaging (FCM) Integration
+* **Goal**: Enable push notifications when a teacher starts an attendance session.
+* **Deliverables**:
+  1. Upload `firebase_credentials.json` to cloud server environment.
+  2. Collect and store device FCM tokens upon student login.
+  3. Send instant high-priority multicast push notifications to student phones.
+
+### 🔐 Sprint Task 3: Advanced Authentication & Login Security
+* **Goal**: Implement multi-factor security and biometric authentication.
+* **Deliverables**:
+  1. **Biometric Authentication (Android)**: Require Fingerprint/FaceID verification before marking attendance.
+  2. **Google OAuth 2.0**: Integrate Google Sign-In for streamlined authentication.
+  3. **Brute-Force Protection**: Add request rate limiting (`Flask-Limiter`) to login endpoints.
 
 ---
 
 ## 📊 Summary of Overall Progress & Metrics
 
-![Progress](https://geps.dev/progress/85?dangerColor=8b0000&warningColor=fe8019&successColor=22c55e)
+![Progress](https://geps.dev/progress/90?dangerColor=8b0000&warningColor=fe8019&successColor=22c55e)
 
 ```
-[██████████████████████████████████████████████████░░░░░░░░░] 85% Overall System Completion
+[██████████████████████████████████████████████████████████░░] 90% Overall System Completion
 ```
 
 | Module | Status | Visual Progress | Highlights / Features |
 | :--- | :--- | :--- | :--- |
-| **Database** | ✅ 100% Complete | `██████████` | 7 relational tables, FK constraints, indexes, seeder script. |
+| **Database** | ✅ 100% Complete | `██████████` | **Neon PostgreSQL** serverless cloud DB, 7 tables, FKs, `setval` sequences. |
 | **ESP8266 Hardware** | ✅ 100% Complete | `██████████` | AP beacon broadcasting (`MCA_ROOM_101`), mDNS service responder. |
 | **Backend Security** | ✅ 100% Complete | `██████████` | Salted scrypt password hashing, JWT tokens, RBAC decorators. |
 | **Attendance APIs** | ✅ 100% Complete | `██████████` | `/start-session`, `/mark-attendance`, `/my-stats`, `/active-roster`. |
@@ -266,5 +332,4 @@
 | **Android App** | ✅ 100% Complete | `██████████` | Student, Teacher, Admin dashboards, Wi-Fi scanner, live roster, stats bars. |
 
 ---
-*Scrum Log last updated for Day 7 completion.*
-
+*Scrum Log last updated for Day 8 completion.*

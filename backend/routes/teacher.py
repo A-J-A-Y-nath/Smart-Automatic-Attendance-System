@@ -115,10 +115,10 @@ def start_attendance_session():
         end_time = now + datetime.timedelta(minutes=5)
 
         cursor.execute(
-            "INSERT INTO attendance_sessions (subject_id, classroom_id, teacher_id, session_date, start_time, end_time, status) VALUES (%s, %s, %s, %s, %s, %s, 'ACTIVE')",
+            "INSERT INTO attendance_sessions (subject_id, classroom_id, teacher_id, session_date, start_time, end_time, status) VALUES (%s, %s, %s, %s, %s, %s, 'ACTIVE') RETURNING id",
             (subject_id, classroom_id, teacher_id, session_date, start_time, end_time)
         )
-        session_id = cursor.lastrowid
+        session_id = cursor.fetchone()["id"]
         conn.commit()
 
         cursor.execute(

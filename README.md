@@ -2,28 +2,29 @@
 
 > **For AI Assistants:** This README is the single source of truth for the project state. Read it fully before making any changes. It describes the architecture, all implemented features, known issues, and what remains to be built.
 
-An Android-based smart attendance system that automatically marks student attendance using an **ESP8266 classroom Wi-Fi beacon**. Teachers start an attendance session from their phone; students nearby scan for the beacon and mark themselves present — all verified server-side and stored in MySQL.
+An Android-based smart attendance system that automatically marks student attendance using an **ESP8266 classroom Wi-Fi beacon**. Teachers start an attendance session from their phone; students nearby scan for the beacon and mark themselves present — all verified server-side and stored in **Neon PostgreSQL**.
 
 ---
 
 ## 📊 Project Completion Progress
 
-![Progress](https://geps.dev/progress/85?dangerColor=8b0000&warningColor=fe8019&successColor=22c55e)
+![Progress](https://geps.dev/progress/90?dangerColor=8b0000&warningColor=fe8019&successColor=22c55e)
 
 ```
-[██████████████████████████████████████████████████░░░░░░░░░] 85% Overall System Completion
+[██████████████████████████████████████████████████████████░░] 90% Overall System Completion
 ```
 
 | Module / Milestone | Status | Visual Progress Bar | Progress |
 |---|---|---|---|
-| **Database Architecture** | ✅ Complete | `██████████` | `100%` |
+| **Database Architecture (Neon PostgreSQL)** | ✅ Complete | `██████████` | `100%` |
 | **ESP8266 Hardware Beacon** | ✅ Complete | `██████████` | `100%` |
 | **Flask REST API & Auth** | ✅ Complete | `██████████` | `100%` |
 | **Android Mobile App & Scanning** | ✅ Complete | `██████████` | `100%` |
 | **Admin Dashboard & Full CRUD** | ✅ Complete | `██████████` | `100%` |
 | **Student Stats & Live Roster** | ✅ Complete | `██████████` | `100%` |
-| **FCM Push Notifications** | ⏳ Partial | `██████░░░░` | `60%` |
-| **Production Cloud Deployment** | ⏳ Pending | `░░░░░░░░░░` | `0%` |
+| **FCM Push Notifications** | ⏳ In Progress | `██████░░░░` | `60%` |
+| **Production Cloud Backend Deployment** | ⏳ Next Task | `██░░░░░░░░` | `20%` |
+| **Advanced Auth & Security** | ⏳ Next Task | `████░░░░░░` | `40%` |
 
 ---
 
@@ -33,10 +34,10 @@ An Android-based smart attendance system that automatically marks student attend
 |---|---|
 | **Hardware** | ESP8266 (ESP-12E / NodeMCU) |
 | **Mobile App** | Android (Java + XML), Material 3, Glassmorphism dark UI |
-| **Backend API** | Python 3, Flask 3.1, PyMySQL, PyJWT, Werkzeug, Flask-CORS |
-| **Database** | MySQL 8.0 |
-| **Push Notifications** | Firebase Cloud Messaging (FCM) — wired up, not fully active |
-| **Tools** | Arduino IDE, Android Studio, Git, Postman |
+| **Backend API** | Python 3, Flask 3.1, psycopg2-binary, PyJWT, Werkzeug, Flask-CORS |
+| **Database** | **Neon PostgreSQL** (Serverless PostgreSQL with SSL) |
+| **Push Notifications** | Firebase Cloud Messaging (FCM) — wired up, pending cloud creds |
+| **Tools** | Arduino IDE, Android Studio, Git, Postman, Neon Dashboard |
 
 ---
 
@@ -47,61 +48,65 @@ Smart-Automatic-Attendance-System/
 ├── android/SmartAttendance/          # Android Studio project
 │   └── app/src/main/java/com/example/smartattendance/
 │       ├── MainActivity.java           # Login screen (Student / Teacher / Admin tabs)
-│       ├── StudentDashboardActivity.java   # Student view — live session + scan
-│       ├── TeacherDashboardActivity.java   # Teacher view — start/stop session, timer
+│       ├── StudentDashboardActivity.java   # Student view — live session + scan + stats
+│       ├── TeacherDashboardActivity.java   # Teacher view — start/stop session, timer, live roster
 │       ├── AdminDashboardActivity.java     # Admin CRUD panel (users, subjects, classrooms, sessions)
 │       ├── ApiClient.java              # Singleton HTTP client (OkHttp + JWT interceptor)
 │       ├── PrefsHelper.java            # SharedPreferences wrapper (JWT token, role)
 │       ├── WifiScanner.java            # Wi-Fi beacon SSID/BSSID scanner
-│       └── AttendanceFcmService.java   # Firebase push notification receiver (partial)
+│       └── AttendanceFcmService.java   # Firebase push notification receiver
 │
 ├── backend/
 │   ├── routes/
 │   │   ├── auth.py       # /api/auth/* — Login endpoints (student/teacher/admin)
-│   │   ├── student.py    # /api/student/* — active session, mark attendance, history
-│   │   ├── teacher.py    # /api/teacher/* — start/stop session, subjects, session records
+│   │   ├── student.py    # /api/student/* — active session, mark attendance, history, stats
+│   │   ├── teacher.py    # /api/teacher/* — start/stop session, subjects, session records, active roster
 │   │   └── admin.py      # /api/admin/* — full CRUD for users, subjects, classrooms, sessions
 │   ├── middleware/
 │   │   └── auth.py       # JWT @token_required and @role_required decorators
 │   ├── database/
-│   │   └── db.py         # PyMySQL connection pool (returns DictCursor)
+│   │   └── db.py         # psycopg2 connection pool (Neon PostgreSQL + DictCursor)
 │   ├── utils/
 │   │   ├── jwt_handler.py    # generate_token / decode_token
 │   │   └── password.py       # hash_password / verify_password (Werkzeug scrypt)
 │   ├── app.py            # Flask entry point — registers all blueprints
-│   ├── seed_users.py     # Seeds DB with test accounts (run once)
+│   ├── seed_users.py     # Seeds PostgreSQL with test accounts and syncs sequences
+│   ├── test_auth_api.py  # E2E auth test suite (100% pass)
+│   ├── test_attendance_overhaul.py # Unit test suite (100% pass)
 │   ├── requirements.txt
-│   └── .env              # DB credentials, JWT secret
+│   └── .env              # DATABASE_URL (Neon PostgreSQL), JWT secret
 │
 ├── database/
-│   └── schema.sql        # MySQL DDL for all tables
+│   └── schema.sql        # PostgreSQL DDL for all tables
 │
 ├── esp8266/
 │   └── classroom_beacon/classroom_beacon.ino  # Arduino AP firmware
+├── scrum_book.md         # Agile daily development log
 └── README.md
 ```
 
 ---
 
-## Database Schema
+## Database Schema (PostgreSQL / Neon)
 
 ```sql
-departments   (id, department_name)
-users         (id, name, register_no, email, password, role ENUM('Student','Teacher','Admin'),
-               department_id, semester, fcm_token, created_at)
-classrooms    (id, room_name, ssid, location)
-subjects      (id, subject_name, subject_code, teacher_id, department_id, semester)
-attendance_sessions  (id, subject_id, teacher_id, classroom_id, session_date,
-                      start_time, end_time, status ENUM('ACTIVE','CLOSED','EXPIRED'))
-attendance_records   (id, session_id, student_id, attendance_time, rssi,
-                      status ENUM('PRESENT','ABSENT'))
-```
+departments   (id SERIAL PRIMARY KEY, department_name VARCHAR(100) UNIQUE)
 
-> **Important:** Sessions created before end-time logic was added may have `end_time = NULL`. These will never auto-expire. The fix is:
-> ```sql
-> UPDATE attendance_sessions SET status='CLOSED', end_time=NOW()
-> WHERE status='ACTIVE' AND end_time IS NULL;
-> ```
+users         (id SERIAL PRIMARY KEY, name VARCHAR(100), register_no VARCHAR(30) UNIQUE,
+               email VARCHAR(100) UNIQUE, password VARCHAR(255), role user_role NOT NULL,
+               department_id INT, semester INT, fcm_token VARCHAR(255), created_at TIMESTAMP)
+
+classrooms    (id SERIAL PRIMARY KEY, room_name VARCHAR(100), ssid VARCHAR(100) UNIQUE, location VARCHAR(100))
+
+subjects      (id SERIAL PRIMARY KEY, subject_name VARCHAR(100), subject_code VARCHAR(20) UNIQUE,
+               teacher_id INT, department_id INT, semester INT)
+
+attendance_sessions  (id SERIAL PRIMARY KEY, subject_id INT, teacher_id INT, classroom_id INT,
+                      session_date DATE, start_time TIMESTAMP, end_time TIMESTAMP, status session_status)
+
+attendance_records   (id SERIAL PRIMARY KEY, session_id INT, student_id INT, attendance_time TIMESTAMP,
+                      rssi INT, status attendance_status, UNIQUE(session_id, student_id))
+```
 
 ---
 
@@ -159,84 +164,11 @@ attendance_records   (id, session_id, student_id, attendance_time, rssi,
 
 ---
 
-## Android App — Screen Flow
-
-```
-MainActivity (Login)
-   ├── [Student tab]  → StudentDashboardActivity
-   ├── [Teacher tab]  → TeacherDashboardActivity
-   └── [Admin tab]    → AdminDashboardActivity
-
-StudentDashboardActivity
-   - Loads profile + checkActiveSession() + fetchMyStats() on resume/refresh
-   - Shows live countdown timer for active class
-   - "Scan WiFi" button → WifiScanner → checks SSID → marks attendance
-   - Attendance Summary Card → Overall %, Present/Absent count, overall progress bar
-   - Per-Subject Breakdown → Subject name, code, present/total count, progress bar per subject
-   - "Switch" button → logs in as Teacher (for testing only)
-   - "Refresh" button → re-fetches active session & stats
-
-TeacherDashboardActivity
-   - Dropdown: select subject (loaded from /api/teacher/my-subjects)
-   - Classroom ID text field
-   - "Start Attendance Session" → 5-minute countdown begins
-   - "Stop Session" button → closes session on backend
-   - Live Present Students Roster → real-time student count + list of names, reg numbers & timestamps
-   - Subject dropdown disabled while session is active
-   - "Switch" button → logs in as Student (for testing only)
-   - checkActiveSession() called only AFTER loadTeacherSubjects() completes (avoids race condition)
-
-AdminDashboardActivity
-   - 7 scrollable glass cards: Students, Teachers, Administrators, Subjects, Classrooms, Sessions, Attendance
-   - Top Bar Refresh Button: Re-fetches all 7 dashboard data streams instantly with toast feedback
-   - Direct Long-Press Multi-Select Delete: Long-pressing any subject/card directly opens the multi-select checkbox list with no dialog heading or 2-option popups
-   - Role-filtered sections: Separate cards for Students, Teachers, and Administrators
-   - "+ Add" button per role card to create a Student, Teacher, or Admin user
-   - "Edit" button per card for single record editing
-   - "+ Add Subject" → dialog with teacher dropdown | "Edit" for subject editing
-   - "+ Add Classroom" → dialog for SSID/room details | "Edit" for classroom editing
-   - "+ Start Session" → dialog: pick teacher + subject + classroom
-```
-
----
-
-## Key Implementation Notes
-
-### Session Lifecycle
-1. Teacher starts session → backend creates row with `status='ACTIVE'`, `end_time = now + 5 min`
-2. Student calls `/active-session` → backend auto-expires stale sessions, returns ACTIVE one
-3. Android CountDownTimer mirrors the `remaining_seconds` from backend
-4. Teacher clicks Stop → `status='CLOSED'`; timer expires → `status='EXPIRED'`
-
-### Race Condition Fixed (TeacherDashboardActivity)
-`checkActiveSession()` is only called inside `loadTeacherSubjects()` success callback — never in parallel — to ensure the spinner is always populated before syncing the active subject.
-
-### Ghost Sessions (Historical Bug — Fixed)
-Old sessions from early testing had `end_time = NULL`. These were permanently ACTIVE. Fixed by running a one-time SQL UPDATE to close them. New sessions always have a 5-minute `end_time`.
-
-### JWT Auth Flow
-- Token stored in `SharedPreferences` via `PrefsHelper`
-- `ApiClient` adds `Authorization: Bearer <token>` to every request via OkHttp interceptor
-- Token expiry causes 401 → both dashboards clear prefs and redirect to login
-
-### Quick-Test Buttons (Dev Only — Remove Before Production)
-Login screen has "Test Student", "Test Teacher", "Test Admin" buttons that auto-fill credentials and log in instantly. The dashboards have a "Switch" button that logs in as the opposite role without going to the login screen.
-
----
-
-## FCM Push Notifications (Partial — Not Fully Working)
-
-`AttendanceFcmService.java` receives Firebase messages. The teacher's `start-session` endpoint attempts to send FCM multicast to all student tokens when a session starts. However, `firebase_credentials.json` is not committed (security), so FCM is silently skipped. The student dashboard instead uses `onResume()` + manual "Refresh" to pull the latest session state.
-
-**To enable FCM:** Place `firebase_credentials.json` in `backend/` directory.
-
----
-
 ## What Is Built ✅
 
 - [x] ESP8266 beacon firmware (broadcasts classroom SSID as AP)
-- [x] MySQL schema with all required tables (`users`, `subjects`, `classrooms`, `attendance_sessions`, `attendance_records`)
-- [x] Flask backend with JWT auth, role-based access control
+- [x] **Neon PostgreSQL Cloud Database** with all tables, constraints, ENUMs, and auto-increment identity sequences
+- [x] Flask backend with JWT auth, role-based access control, and PostgreSQL `psycopg2` driver integration
 - [x] Student / Teacher / Admin login with role-specific endpoints
 - [x] Attendance session lifecycle (START → ACTIVE → CLOSED/EXPIRED)
 - [x] Wi-Fi beacon scanning on Android (SSID match to classroom)
@@ -250,33 +182,26 @@ Login screen has "Test Student", "Test Teacher", "Test Admin" buttons that auto-
 
 ---
 
-## Roadmap to Final Release Output ⏳
+## 🎯 Next Tasks & Roadmap
 
-### Phase 1: Student Enrollment System
-- [ ] **Enrollment Table (`student_subjects`)**: Create a mapping table `student_subjects (student_id, subject_id)` to explicitly enroll students in subjects.
-- [ ] **Admin Enrollment UI**: Add interface in `AdminDashboardActivity` to assign students to subjects.
-- [ ] **Exact Absent Calculation**: Use explicit enrollment records to calculate 100% accurate absent rosters (Enrolled Students minus Present Students).
+### Task 1: Hosting Backend Online (Render / Vercel / Cloud)
+- [ ] **Cloud Server Setup**: Deploy the Python Flask API to Render, Vercel, or Railway with SSL/HTTPS.
+- [ ] **Environment Configuration**: Set production `DATABASE_URL` pointing to Neon PostgreSQL and update `JWT_SECRET`.
+- [ ] **Android `BASE_URL` Update**: Update `ApiClient.java` to use the live cloud HTTPS domain.
 
-### Phase 2: Analytics & Report Export
-- [ ] **CSV / Excel Report Export**: Add export feature for teachers/admin to download attendance sheets for grading.
-- [ ] **Low Attendance Alert System**: Flag students whose overall attendance falls below 75% threshold.
+### Task 2: Firebase Cloud Messaging (FCM) Integration
+- [ ] **FCM Credential Setup**: Upload `firebase_credentials.json` to the hosted backend server.
+- [ ] **Device Token Registration**: Capture and update FCM tokens when students log in.
+- [ ] **Instant Notification Dispatch**: Send background push notifications to student phones when a teacher starts a session.
 
-### Phase 3: Push Notifications & Live Refresh
-- [ ] **Full FCM Integration**: Supply `firebase_credentials.json` to enable background push notifications when a class starts.
-
-### Phase 4: Production Security & Cleanup
-- [ ] **Production Cleanup**: Remove developer test buttons (`Test Student`, `Test Teacher`, `Test Admin`, `Switch` button).
-- [ ] **Proxy Prevention**: Optional RSSI signal threshold check (-70 dBm) to ensure students are physically inside the room.
-- [ ] **Secondary Auth**: Optional Biometric (Fingerprint/FaceID) or OTP verification before marking attendance.
-
-### Phase 5: Final Deployment
-- [ ] **Release APK Build**: Build signed Android release APK.
-- [ ] **Cloud Backend Deployment**: Deploy Flask app and MySQL to cloud provider (Render/AWS/DigitalOcean) with HTTPS/SSL.
-- [ ] **Final User Manual & Project Documentation**.
+### Task 3: Enhanced Authentication & Login Security
+- [ ] **Biometric Fingerprint / Face ID Authentication**: Require local device biometric authentication before a student can mark attendance.
+- [ ] **Google OAuth / Social Sign-In**: Add Google OAuth login support alongside email/password.
+- [ ] **Rate Limiting & Brute-Force Defense**: Implement request throttling on login endpoints using `Flask-Limiter`.
 
 ---
 
-## Running the Project
+## Running the Project Locally
 
 ### Backend
 ```bash
@@ -284,26 +209,22 @@ cd backend
 python -m venv venv
 venv\Scripts\activate       # Windows
 pip install -r requirements.txt
-python seed_users.py         # Run once to populate test data
+python seed_users.py         # Populates test data & syncs PostgreSQL sequences
 python app.py                # Runs on 0.0.0.0:5000
 ```
 
 ### Android
 1. Open `android/SmartAttendance` in Android Studio
-2. Set `BASE_URL` in `ApiClient.java` to your PC's local IP (e.g. `http://192.168.x.x:5000`)
+2. Set `BASE_URL` in `ApiClient.java` to your PC's local Wi-Fi IP (e.g. `http://192.168.x.x:5000`)
 3. Run on physical device (Wi-Fi scanning requires a real device, not emulator)
-
-### ESP8266
-1. Open `esp8266/classroom_beacon/classroom_beacon.ino` in Arduino IDE
-2. Flash to NodeMCU — it broadcasts SSID `MCA_ROOM_101` (matches `classrooms.ssid` in DB)
 
 ---
 
 ## Author
 
-**M. S. Ajaynath**
-Master of Computer Applications (MCA)
-Rajiv Gandhi Institute of Technology (RIT), Kottayam
+**M. S. Ajaynath**  
+Master of Computer Applications (MCA)  
+Rajiv Gandhi Institute of Technology (RIT), Kottayam  
 
 ---
 

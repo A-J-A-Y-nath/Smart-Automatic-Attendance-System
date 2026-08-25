@@ -86,18 +86,18 @@ def create_user():
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "INSERT INTO users (name, register_no, email, password, role, department_id, semester) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+            "INSERT INTO users (name, register_no, email, password, role, department_id, semester) VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id",
             (name, register_no, email, hashed, role, department_id, semester)
         )
-        new_id = cursor.lastrowid
+        new_id = cursor.fetchone()['id']
         conn.commit()
         return jsonify({"status": "success", "message": f"{role} '{name}' created.", "user_id": new_id}), 201
     except Exception as e:
         conn.rollback()
         msg = str(e)
-        if "Duplicate entry" in msg and "email" in msg:
+        if any(err in msg.lower() for err in ["duplicate entry", "duplicate key", "unique constraint"]) and "email" in msg:
             return jsonify({"status": "error", "message": "A user with this email already exists."}), 409
-        if "Duplicate entry" in msg and "register_no" in msg:
+        if any(err in msg.lower() for err in ["duplicate entry", "duplicate key", "unique constraint"]) and "register_no" in msg:
             return jsonify({"status": "error", "message": "Register number already exists."}), 409
         return jsonify({"status": "error", "message": msg}), 500
     finally:
@@ -170,9 +170,9 @@ def update_user(user_id):
     except Exception as e:
         conn.rollback()
         msg = str(e)
-        if "Duplicate entry" in msg and "email" in msg:
+        if any(err in msg.lower() for err in ["duplicate entry", "duplicate key", "unique constraint"]) and "email" in msg:
             return jsonify({"status": "error", "message": "A user with this email already exists."}), 409
-        if "Duplicate entry" in msg and "register_no" in msg:
+        if any(err in msg.lower() for err in ["duplicate entry", "duplicate key", "unique constraint"]) and "register_no" in msg:
             return jsonify({"status": "error", "message": "Register number already exists."}), 409
         return jsonify({"status": "error", "message": msg}), 500
     finally:
@@ -228,15 +228,15 @@ def create_subject():
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "INSERT INTO subjects (subject_name, subject_code, teacher_id, semester, department_id) VALUES (%s,%s,%s,%s,%s)",
+            "INSERT INTO subjects (subject_name, subject_code, teacher_id, semester, department_id) VALUES (%s,%s,%s,%s,%s) RETURNING id",
             (subject_name, subject_code, teacher_id, semester, department_id)
         )
-        new_id = cursor.lastrowid
+        new_id = cursor.fetchone()['id']
         conn.commit()
         return jsonify({"status": "success", "message": f"Subject '{subject_name}' created.", "subject_id": new_id}), 201
     except Exception as e:
         conn.rollback()
-        if "Duplicate entry" in str(e):
+        if any(err in str(e).lower() for err in ["duplicate entry", "duplicate key", "unique constraint"]):
             return jsonify({"status": "error", "message": f"Subject code '{subject_code}' already exists."}), 409
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
@@ -294,7 +294,7 @@ def update_subject(subject_id):
         return jsonify({"status": "success", "message": f"Subject '{subject_name}' updated."}), 200
     except Exception as e:
         conn.rollback()
-        if "Duplicate entry" in str(e):
+        if any(err in str(e).lower() for err in ["duplicate entry", "duplicate key", "unique constraint"]):
             return jsonify({"status": "error", "message": f"Subject code '{subject_code}' already exists."}), 409
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
@@ -341,15 +341,15 @@ def create_classroom():
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "INSERT INTO classrooms (room_name, ssid, location) VALUES (%s,%s,%s)",
+            "INSERT INTO classrooms (room_name, ssid, location) VALUES (%s,%s,%s) RETURNING id",
             (room_name, ssid, location)
         )
-        new_id = cursor.lastrowid
+        new_id = cursor.fetchone()['id']
         conn.commit()
         return jsonify({"status": "success", "message": f"Classroom '{room_name}' created.", "classroom_id": new_id}), 201
     except Exception as e:
         conn.rollback()
-        if "Duplicate entry" in str(e):
+        if any(err in str(e).lower() for err in ["duplicate entry", "duplicate key", "unique constraint"]):
             return jsonify({"status": "error", "message": f"SSID '{ssid}' already used."}), 409
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
@@ -406,7 +406,7 @@ def update_classroom(classroom_id):
         return jsonify({"status": "success", "message": f"Classroom '{room_name}' updated."}), 200
     except Exception as e:
         conn.rollback()
-        if "Duplicate entry" in str(e):
+        if any(err in str(e).lower() for err in ["duplicate entry", "duplicate key", "unique constraint"]):
             return jsonify({"status": "error", "message": f"SSID '{ssid}' already used."}), 409
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
@@ -478,8 +478,9 @@ def admin_start_session():
         cursor.execute("""
             INSERT INTO attendance_sessions (subject_id, classroom_id, teacher_id, session_date, start_time, end_time, status)
             VALUES (%s,%s,%s,%s,%s,%s,'ACTIVE')
+            RETURNING id
         """, (subject_id, classroom_id, teacher_id, now.date(), now, end_time))
-        session_id = cursor.lastrowid
+        session_id = cursor.fetchone()['id']
         conn.commit()
         return jsonify({"status": "success", "message": "Session started.", "session_id": session_id, "remaining_seconds": 300}), 201
     except Exception as e:
