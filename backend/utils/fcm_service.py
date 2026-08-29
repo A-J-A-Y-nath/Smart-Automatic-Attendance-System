@@ -88,18 +88,9 @@ def send_multicast_attendance_alert(session_id, classroom_id, subject_name, toke
                 "classroom_id": str(classroom_id),
                 "subject_name": str(subject_name),
             },
-            notification=messaging.Notification(
-                title="Class Attendance Started!",
-                body=f"Marking attendance for {subject_name} now."
-            ),
             tokens=valid_tokens,
             android=messaging.AndroidConfig(
-                priority="high",
-                notification=messaging.AndroidNotification(
-                    channel_id="attendance_channel",
-                    sound="default",
-                    click_action="OPEN_STUDENT_DASHBOARD"
-                )
+                priority="high"
             )
         )
 
