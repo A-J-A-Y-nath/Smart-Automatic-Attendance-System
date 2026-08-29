@@ -8,10 +8,10 @@ An Android-based smart attendance system that automatically marks student attend
 
 ## 📊 Project Completion Progress
 
-![Progress](https://geps.dev/progress/95?dangerColor=8b0000&warningColor=fe8019&successColor=22c55e)
+![Progress](https://geps.dev/progress/98?dangerColor=8b0000&warningColor=fe8019&successColor=22c55e)
 
 ```
-[████████████████████████████████████████████████████████████░] 95% Overall System Completion
+[█████████████████████████████████████████████████████████████] 98% Overall System Completion
 ```
 
 | Module / Milestone | Status | Visual Progress Bar | Progress |
@@ -23,7 +23,7 @@ An Android-based smart attendance system that automatically marks student attend
 | **Admin Dashboard & Full CRUD** | ✅ Complete | `██████████` | `100%` |
 | **Student Stats & Live Roster** | ✅ Complete | `██████████` | `100%` |
 | **Production Cloud Backend Deployment (Render)** | ✅ Complete | `██████████` | `100%` |
-| **FCM Push Notifications** | ⏳ In Progress | `██████░░░░` | `60%` |
+| **FCM Push Notifications** | ✅ Complete | `██████████` | `100%` |
 | **Advanced Auth (Biometrics / OAuth)** | ⏳ Next Task | `████░░░░░░` | `40%` |
 
 ---
@@ -37,7 +37,7 @@ An Android-based smart attendance system that automatically marks student attend
 | **Backend API** | Python 3, Flask 3.1, psycopg2-binary, PyJWT, Werkzeug, Flask-CORS |
 | **Hosting Platform** | **Render Cloud Hosting** (Live HTTPS Server) |
 | **Database** | **Neon PostgreSQL** (Serverless PostgreSQL with SSL) |
-| **Push Notifications** | Firebase Cloud Messaging (FCM) — wired up, pending production creds |
+| **Push Notifications** | Firebase Cloud Messaging (FCM) — fully integrated with background automatic marking |
 | **Tools** | Arduino IDE, Android Studio, Git, Postman, Render Dashboard, Neon Console |
 
 ---
