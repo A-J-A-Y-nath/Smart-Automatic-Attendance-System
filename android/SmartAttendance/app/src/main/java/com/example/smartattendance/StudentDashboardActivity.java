@@ -195,6 +195,7 @@ public class StudentDashboardActivity extends AppCompatActivity {
                         String regNo = userObj.optString("register_no", "");
                         String email = userObj.optString("email", "");
                         currentStudentId = userObj.optInt("id", -1);
+                        prefsHelper.saveUserDetails(currentStudentId, "Student");
                         tvStudentInfo.setText("Name: " + name + "\nReg No: " + regNo + "\nEmail: " + email);
                         
                         checkActiveSession();
@@ -231,6 +232,7 @@ public class StudentDashboardActivity extends AppCompatActivity {
                     currentSessionId = session.optInt("session_id", -1);
 
                     if (studentTimer != null) studentTimer.cancel();
+                    btnScan.setEnabled(true);
                     studentTimer = new CountDownTimer(remSec * 1000L, 1000) {
                         @Override
                         public void onTick(long millisUntilFinished) {
@@ -248,6 +250,7 @@ public class StudentDashboardActivity extends AppCompatActivity {
 
                 } else {
                     currentSessionId = -1;
+                    btnScan.setEnabled(false);
                     if (studentTimer != null) {
                         studentTimer.cancel();
                         studentTimer = null;

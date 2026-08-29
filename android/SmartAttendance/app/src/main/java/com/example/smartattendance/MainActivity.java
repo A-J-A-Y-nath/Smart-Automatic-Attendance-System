@@ -124,7 +124,8 @@ public class MainActivity extends AppCompatActivity {
                     
                     JSONObject user = response.getJSONObject("user");
                     String role = user.getString("role");
-                    prefsHelper.saveUserRole(role);
+                    int userId = user.optInt("id", -1);
+                    prefsHelper.saveUserDetails(userId, role);
                     
                     Toast.makeText(MainActivity.this, "Login Successful", Toast.LENGTH_SHORT).show();
                     
