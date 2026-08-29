@@ -254,3 +254,38 @@ def get_my_stats():
     finally:
         cursor.close()
         conn.close()
+
+
+@student_bp.route("/update-fcm-token", methods=["POST"])
+@token_required
+def update_fcm_token():
+    """
+    POST /api/student/update-fcm-token
+    Updates the FCM token for the currently authenticated user (Student/Teacher).
+    """
+    current_user = g.current_user
+    data = request.get_json() or {}
+    fcm_token = data.get("fcm_token")
+
+    if not fcm_token:
+        return jsonify({"status": "error", "message": "FCM token is required."}), 400
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "UPDATE users SET fcm_token = %s WHERE id = %s",
+            (fcm_token, current_user["user_id"])
+        )
+        conn.commit()
+        return jsonify({
+            "status": "success",
+            "message": "FCM token updated successfully."
+        }), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+

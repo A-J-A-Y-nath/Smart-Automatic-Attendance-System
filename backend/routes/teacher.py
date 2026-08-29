@@ -8,16 +8,8 @@ Provides Flask Blueprint for faculty operations
 from flask import Blueprint, jsonify, request, g
 from middleware.auth import token_required, role_required
 from database.db import get_connection
-import firebase_admin
-from firebase_admin import credentials, messaging
 import datetime
-
-if not firebase_admin._apps:
-    try:
-        cred = credentials.Certificate("firebase_credentials.json")
-        firebase_admin.initialize_app(cred)
-    except FileNotFoundError:
-        print("Warning: firebase_credentials.json not found. FCM will fail.")
+from utils.fcm_service import send_multicast_attendance_alert
 
 teacher_bp = Blueprint("teacher", __name__, url_prefix="/api/teacher")
 
@@ -121,6 +113,12 @@ def start_attendance_session():
         session_id = cursor.fetchone()["id"]
         conn.commit()
 
+        # Get subject name for notification payload
+        cursor.execute("SELECT subject_name FROM subjects WHERE id = %s", (subject_id,))
+        subj_row = cursor.fetchone()
+        subject_name = subj_row["subject_name"] if subj_row else "Unknown Subject"
+
+        # Get student device tokens
         cursor.execute(
             "SELECT fcm_token FROM users WHERE role = 'Student' AND fcm_token IS NOT NULL"
         )
@@ -128,34 +126,25 @@ def start_attendance_session():
         tokens = [s['fcm_token'] for s in students if s['fcm_token']]
 
         if not tokens:
-            return jsonify({"message": "Session created, but no registered devices found for FCM", "session_id": session_id}), 200
-
-        if not firebase_admin._apps:
             return jsonify({
                 "success": True,
                 "session_id": session_id,
                 "dispatched_count": 0,
-                "note": "Session created in DB. FCM dispatch skipped (firebase_credentials.json not present)."
+                "message": "Session created, but no registered student devices found for FCM."
             }), 200
 
-        message = messaging.MulticastMessage(
-            data={
-                "action": "START_ATTENDANCE",
-                "session_id": str(session_id),
-                "classroom_id": str(classroom_id)
-            },
-            tokens=tokens,
-            android=messaging.AndroidConfig(
-                priority="high"
-            )
+        success_count, failure_count = send_multicast_attendance_alert(
+            session_id=session_id,
+            classroom_id=classroom_id,
+            subject_name=subject_name,
+            tokens=tokens
         )
-
-        response = messaging.send_each_for_multicast(message)
         
         return jsonify({
             "success": True,
             "session_id": session_id,
-            "dispatched_count": response.success_count
+            "dispatched_count": success_count,
+            "failed_count": failure_count
         }), 200
 
     except Exception as e:

@@ -8,11 +8,24 @@ public class PrefsHelper {
     private static final String KEY_JWT_TOKEN = "jwt_token";
     private static final String KEY_USER_ID = "user_id";
     private static final String KEY_USER_ROLE = "user_role";
+    private static final String KEY_FCM_TOKEN = "fcm_token";
 
     private final SharedPreferences sharedPreferences;
 
     public PrefsHelper(Context context) {
         sharedPreferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+    }
+
+    public void saveFcmToken(String token) {
+        sharedPreferences.edit().putString(KEY_FCM_TOKEN, token).apply();
+    }
+
+    public String getFcmToken() {
+        return sharedPreferences.getString(KEY_FCM_TOKEN, null);
+    }
+
+    public boolean isLoggedIn() {
+        return getJwtToken() != null && !getJwtToken().isEmpty() && getUserId() != -1;
     }
 
     public void saveJwtToken(String token) {

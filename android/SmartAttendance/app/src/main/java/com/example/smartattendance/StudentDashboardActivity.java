@@ -41,6 +41,7 @@ public class StudentDashboardActivity extends AppCompatActivity {
     private int currentStudentId = -1; 
     private int currentSessionId = -1; 
     private CountDownTimer studentTimer;
+    private android.content.BroadcastReceiver attendanceUpdateReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -109,6 +110,47 @@ public class StudentDashboardActivity extends AppCompatActivity {
 
         btnScan.setOnClickListener(v -> startScanning());
 
+        // Initialize BroadcastReceiver for automatic attendance updates from FCM Service
+        attendanceUpdateReceiver = new android.content.BroadcastReceiver() {
+            @Override
+            public void onReceive(android.content.Context context, android.content.Intent intent) {
+                String status = intent.getStringExtra(AttendanceFcmService.EXTRA_STATUS);
+                String msg = intent.getStringExtra(AttendanceFcmService.EXTRA_MESSAGE);
+                
+                checkActiveSession();
+                fetchMyStats();
+                
+                Toast.makeText(StudentDashboardActivity.this, "Attendance update: " + msg, Toast.LENGTH_LONG).show();
+            }
+        };
+
+        // Safety upload of FCM token on launch
+        String existingToken = prefsHelper.getFcmToken();
+        if (existingToken != null && !existingToken.isEmpty()) {
+            ApiClient.getInstance(this).updateFcmToken(existingToken, new ApiClient.ApiCallback() {
+                @Override
+                public void onSuccess(JSONObject response) {}
+
+                @Override
+                public void onError(String errorMessage) {}
+            });
+        } else {
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().getToken()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful() && task.getResult() != null) {
+                        String token = task.getResult();
+                        prefsHelper.saveFcmToken(token);
+                        ApiClient.getInstance(StudentDashboardActivity.this).updateFcmToken(token, new ApiClient.ApiCallback() {
+                            @Override
+                            public void onSuccess(JSONObject response) {}
+
+                            @Override
+                            public void onError(String errorMessage) {}
+                        });
+                    }
+                });
+        }
+
         fetchProfile();
         fetchMyStats();
     }
@@ -116,8 +158,28 @@ public class StudentDashboardActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (attendanceUpdateReceiver != null) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(attendanceUpdateReceiver, 
+                    new android.content.IntentFilter(AttendanceFcmService.ACTION_ATTENDANCE_UPDATE), 
+                    android.content.Context.RECEIVER_NOT_EXPORTED);
+            } else {
+                registerReceiver(attendanceUpdateReceiver, 
+                    new android.content.IntentFilter(AttendanceFcmService.ACTION_ATTENDANCE_UPDATE));
+            }
+        }
         checkActiveSession();
         fetchMyStats();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (attendanceUpdateReceiver != null) {
+            try {
+                unregisterReceiver(attendanceUpdateReceiver);
+            } catch (Exception ignored) {}
+        }
     }
 
     private void fetchProfile() {

@@ -1,131 +1,159 @@
 package com.example.smartattendance;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
-import android.net.nsd.NsdManager;
-import android.net.nsd.NsdServiceInfo;
-import android.os.PowerManager;
+import android.content.Intent;
+import android.os.Build;
+import android.util.Log;
 import androidx.annotation.NonNull;
+import androidx.core.app.NotificationCompat;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
-import java.io.IOException;
+import org.json.JSONObject;
 
 public class AttendanceFcmService extends FirebaseMessagingService {
 
-    private NsdManager nsdManager;
-    private NsdManager.DiscoveryListener discoveryListener;
-    private PowerManager.WakeLock wakeLock;
+    private static final String TAG = "AttendanceFcmService";
+    private static final String CHANNEL_ID = "attendance_channel";
+    private static final String CHANNEL_NAME = "Class Attendance Alerts";
+    
+    public static final String ACTION_ATTENDANCE_UPDATE = "com.example.smartattendance.ATTENDANCE_UPDATE";
+    public static final String EXTRA_STATUS = "status";
+    public static final String EXTRA_MESSAGE = "message";
+
+    @Override
+    public void onNewToken(@NonNull String token) {
+        super.onNewToken(token);
+        Log.d(TAG, "Refreshed FCM Token: " + token);
+        
+        PrefsHelper prefsHelper = new PrefsHelper(getApplicationContext());
+        prefsHelper.saveFcmToken(token);
+
+        if (prefsHelper.isLoggedIn()) {
+            ApiClient.getInstance(getApplicationContext()).updateFcmToken(token, new ApiClient.ApiCallback() {
+                @Override
+                public void onSuccess(JSONObject response) {
+                    Log.d(TAG, "Successfully uploaded new FCM token to backend.");
+                }
+
+                @Override
+                public void onError(String errorMessage) {
+                    Log.e(TAG, "Failed to upload new FCM token to backend: " + errorMessage);
+                }
+            });
+        }
+    }
 
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
+        super.onMessageReceived(remoteMessage);
+        Log.d(TAG, "FCM Message received from: " + remoteMessage.getFrom());
+
         if (remoteMessage.getData().size() > 0) {
             String action = remoteMessage.getData().get("action");
-            String sessionId = remoteMessage.getData().get("session_id");
+            String sessionIdStr = remoteMessage.getData().get("session_id");
+            String subjectName = remoteMessage.getData().get("subject_name");
 
-            if ("START_ATTENDANCE".equals(action)) {
-                acquireWakeLock();
-                startNsdDiscovery(sessionId);
+            if ("START_ATTENDANCE".equals(action) && sessionIdStr != null) {
+                try {
+                    int sessionId = Integer.parseInt(sessionIdStr);
+                    handleAutomaticAttendance(sessionId, subjectName != null ? subjectName : "Class");
+                } catch (NumberFormatException e) {
+                    Log.e(TAG, "Invalid session ID format: " + sessionIdStr);
+                }
             }
         }
     }
 
-    private void acquireWakeLock() {
-        PowerManager powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
-        if (powerManager != null) {
-            wakeLock = powerManager.newWakeLock(
-                    PowerManager.PARTIAL_WAKE_LOCK,
-                    "SmartAttendance::BeaconScanWakeLock"
-            );
-            wakeLock.acquire(15 * 1000L);
+    private void handleAutomaticAttendance(int sessionId, String subjectName) {
+        PrefsHelper prefsHelper = new PrefsHelper(getApplicationContext());
+        
+        if (!prefsHelper.isLoggedIn()) {
+            Log.w(TAG, "Student is not logged in. Skipping automatic attendance marking.");
+            showNotification("Attendance Session Started", "Please login to mark attendance for " + subjectName, false);
+            return;
         }
-    }
 
-    private void startNsdDiscovery(String sessionId) {
-        nsdManager = (NsdManager) getSystemService(Context.NSD_SERVICE);
+        int studentId = prefsHelper.getUserId();
+        
+        showNotification("Automatic Attendance", "Verifying presence and marking attendance for " + subjectName + "...", false);
 
-        discoveryListener = new NsdManager.DiscoveryListener() {
+        ApiClient.getInstance(getApplicationContext()).markAttendance(sessionId, studentId, new ApiClient.ApiCallback() {
             @Override
-            public void onStartDiscoveryFailed(String serviceType, int errorCode) {
-                stopDiscovery();
-                releaseWakeLock();
-            }
+            public void onSuccess(JSONObject response) {
+                boolean success = response.optBoolean("success", true);
+                boolean alreadyMarked = response.optBoolean("already_marked", false);
+                String msg = response.optString("message", "Attendance recorded!");
 
-            @Override
-            public void onStopDiscoveryFailed(String serviceType, int errorCode) {
-                releaseWakeLock();
-            }
-
-            @Override
-            public void onDiscoveryStarted(String serviceType) {}
-
-            @Override
-            public void onDiscoveryStopped(String serviceType) {}
-
-            @Override
-            public void onServiceFound(NsdServiceInfo serviceInfo) {
-                if (serviceInfo.getServiceType().contains("_attendance._tcp")) {
-                    nsdManager.resolveService(serviceInfo, new NsdManager.ResolveListener() {
-                        @Override
-                        public void onResolveFailed(NsdServiceInfo serviceInfo, int errorCode) {
-                            stopDiscovery();
-                            releaseWakeLock();
-                        }
-
-                        @Override
-                        public void onServiceResolved(NsdServiceInfo serviceInfo) {
-                            sendAttendanceToBackend(sessionId);
-                            stopDiscovery();
-                        }
-                    });
+                if (success) {
+                    String title = alreadyMarked ? "Attendance Verified" : "Attendance Marked ✓";
+                    String body = alreadyMarked ? "Already marked present for " + subjectName : "Successfully marked present for " + subjectName;
+                    showNotification(title, body, true);
+                    
+                    // Broadcast event to refresh active StudentDashboard UI
+                    sendUiUpdateBroadcast("SUCCESS", msg);
+                } else {
+                    showNotification("Attendance Verification Failed", msg, false);
+                    sendUiUpdateBroadcast("FAILED", msg);
                 }
             }
 
             @Override
-            public void onServiceLost(NsdServiceInfo serviceInfo) {}
-        };
-
-        nsdManager.discoverServices("_attendance._tcp.", NsdManager.PROTOCOL_DNS_SD, discoveryListener);
-    }
-
-    private void sendAttendanceToBackend(String sessionId) {
-        OkHttpClient client = new OkHttpClient();
-        // Ideally student_id is retrieved from local secure storage/preferences
-        String jsonPayload = "{\"student_id\": 1, \"session_id\": " + sessionId + "}";
-        RequestBody body = RequestBody.create(jsonPayload, MediaType.parse("application/json; charset=utf-8"));
-
-        Request request = new Request.Builder()
-                // Update with the actual backend host when deploying
-                .url("http://10.0.2.2:5000/api/student/mark-attendance")
-                .post(body)
-                .build();
-
-        try {
-            Response response = client.newCall(request).execute();
-            if (response.isSuccessful()) {
-                releaseWakeLock();
-            } else {
-                releaseWakeLock();
+            public void onError(String errorMessage) {
+                Log.e(TAG, "Failed to automatically mark attendance: " + errorMessage);
+                showNotification("Attendance Failed", "Error marking attendance: " + errorMessage, false);
+                sendUiUpdateBroadcast("ERROR", errorMessage);
             }
-        } catch (IOException e) {
-            releaseWakeLock();
-        }
+        });
     }
 
-    private void stopDiscovery() {
-        if (nsdManager != null && discoveryListener != null) {
-            try {
-                nsdManager.stopServiceDiscovery(discoveryListener);
-            } catch (Exception ignored) {}
-        }
+    private void sendUiUpdateBroadcast(String status, String message) {
+        Intent intent = new Intent(ACTION_ATTENDANCE_UPDATE);
+        intent.putExtra(EXTRA_STATUS, status);
+        intent.putExtra(EXTRA_MESSAGE, message);
+        sendBroadcast(intent);
     }
 
-    private void releaseWakeLock() {
-        if (wakeLock != null && wakeLock.isHeld()) {
-            wakeLock.release();
+    private void showNotification(String title, String contentText, boolean isSuccess) {
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+        if (notificationManager == null) return;
+
+        // Create Notification Channel for Android Oreo and above
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID,
+                    CHANNEL_NAME,
+                    NotificationManager.IMPORTANCE_HIGH
+            );
+            channel.setDescription("Notifications related to automatic class attendance marking");
+            channel.enableLights(true);
+            channel.setVibrationPattern(new long[]{0, 500, 250, 500});
+            notificationManager.createNotificationChannel(channel);
         }
+
+        // Click action: open StudentDashboardActivity
+        Intent intent = new Intent(this, StudentDashboardActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                this,
+                0,
+                intent,
+                PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(isSuccess ? android.R.drawable.stat_sys_upload_done : android.R.drawable.stat_notify_chat)
+                .setContentTitle(title)
+                .setContentText(contentText)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setContentIntent(pendingIntent);
+
+        // Notify
+        notificationManager.notify((int) System.currentTimeMillis(), builder.build());
     }
 }

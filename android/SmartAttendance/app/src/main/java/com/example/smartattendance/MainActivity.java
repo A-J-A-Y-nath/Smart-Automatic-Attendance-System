@@ -128,14 +128,7 @@ public class MainActivity extends AppCompatActivity {
                     
                     Toast.makeText(MainActivity.this, "Login Successful", Toast.LENGTH_SHORT).show();
                     
-                    if ("Teacher".equals(role)) {
-                        startActivity(new Intent(MainActivity.this, TeacherDashboardActivity.class));
-                    } else if ("Admin".equals(role)) {
-                        startActivity(new Intent(MainActivity.this, AdminDashboardActivity.class));
-                    } else {
-                        startActivity(new Intent(MainActivity.this, StudentDashboardActivity.class));
-                    }
-                    finish();
+                    fetchAndUploadFcmToken(role);
                 } catch (JSONException e) {
                     Toast.makeText(MainActivity.this, "Error parsing login response", Toast.LENGTH_SHORT).show();
                 }
@@ -148,6 +141,45 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(MainActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void fetchAndUploadFcmToken(final String role) {
+        progressBar.setVisibility(View.VISIBLE);
+        com.google.firebase.messaging.FirebaseMessaging.getInstance().getToken()
+                .addOnCompleteListener(task -> {
+                    progressBar.setVisibility(View.GONE);
+                    if (!task.isSuccessful()) {
+                        android.util.Log.w("MainActivity", "Fetching FCM registration token failed", task.getException());
+                        navigateToDashboard(role);
+                        return;
+                    }
+
+                    String token = task.getResult();
+                    prefsHelper.saveFcmToken(token);
+
+                    ApiClient.getInstance(MainActivity.this).updateFcmToken(token, new ApiClient.ApiCallback() {
+                        @Override
+                        public void onSuccess(JSONObject response) {
+                            navigateToDashboard(role);
+                        }
+
+                        @Override
+                        public void onError(String errorMessage) {
+                            navigateToDashboard(role);
+                        }
+                    });
+                });
+    }
+
+    private void navigateToDashboard(String role) {
+        if ("Teacher".equals(role)) {
+            startActivity(new Intent(MainActivity.this, TeacherDashboardActivity.class));
+        } else if ("Admin".equals(role)) {
+            startActivity(new Intent(MainActivity.this, AdminDashboardActivity.class));
+        } else {
+            startActivity(new Intent(MainActivity.this, StudentDashboardActivity.class));
+        }
+        finish();
     }
 
     private void requestBatteryOptimizationExemption() {

@@ -19,21 +19,19 @@ class TestAttendanceOverhaul(unittest.TestCase):
         self.assertIn(response.status_code, [400, 401, 403])
 
     @patch("routes.teacher.get_connection")
-    @patch("routes.teacher.messaging")
-    def test_start_session_success_with_mock_db(self, mock_messaging, mock_get_connection):
+    @patch("routes.teacher.send_multicast_attendance_alert")
+    def test_start_session_success_with_mock_db(self, mock_send_alert, mock_get_connection):
         """Test /api/teacher/start-session endpoint with mocked DB and FCM"""
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
         mock_get_connection.return_value = mock_conn
         mock_conn.cursor.return_value = mock_cursor
 
-        # Mock cursor fetchone (returning session id) and fetchall (student tokens)
-        mock_cursor.fetchone.return_value = {'id': 101}
+        # Mock cursor fetchone (returning session id and subject) and fetchall (student tokens)
+        mock_cursor.fetchone.return_value = {'id': 101, 'subject_name': 'Test Subject'}
         mock_cursor.fetchall.return_value = [{'fcm_token': 'token_123'}, {'fcm_token': 'token_456'}]
 
-        mock_response = MagicMock()
-        mock_response.success_count = 2
-        mock_messaging.send_each_for_multicast.return_value = mock_response
+        mock_send_alert.return_value = (2, 0)
 
         payload = {
             "classroom_id": 1,

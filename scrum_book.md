@@ -15,6 +15,7 @@
 - [Day 6: Full Admin Control Panel & Role-Separated CRUD Operations](#-day-6-full-admin-control-panel--role-separated-crud-operations)
 - [Day 7: Student Attendance Statistics & Live Teacher Roster Engine](#-day-7-student-attendance-statistics--live-teacher-roster-engine)
 - [Day 8: Cloud Database Migration to Neon PostgreSQL](#-day-8-cloud-database-migration-to-neon-postgresql)
+- [Day 9: Live Cloud Backend Deployment on Render](#-day-9-live-cloud-backend-deployment-on-render)
 - [Upcoming Sprints & Next Tasks](#-upcoming-sprints--next-tasks)
 - [Summary of Overall Progress & Metrics](#-summary-of-overall-progress--metrics)
 
@@ -92,7 +93,7 @@
    * Created [`database/db.py`](file:///e:/Smart-Automatic-Attendance-System/backend/database/db.py) database connection pool.
 2. **Cryptographic Security Implementation**:
    * **Password Hashing ([`utils/password.py`](file:///e:/Smart-Automatic-Attendance-System/backend/utils/password.py))**: Used `Werkzeug.security` with salted `scrypt`/`pbkdf2` algorithms.
-   * **JWT Security Handler ([`utils/jwt_handler.py`](file:///e:/Smart-Automatic-Attendance-System/backend/utils/jwt_handler.py))**: Encodes and decodes signed JWT bearer tokens with expiration handling.
+   * **JWT Security Handler ([`utils/jwt_handler.py`](file:///e:/Smart-Automatic-Attendance-System/backend/utils/jwt_handler.py))**: Encodes and decodes signed JWT bearer tokens with expiration handling (`JWT_SECRET`).
 3. **Role-Based Access Control Middleware ([`middleware/auth.py`](file:///e:/Smart-Automatic-Attendance-System/backend/middleware/auth.py))**:
    * Decorator `@token_required`: Intercepts incoming HTTP requests and validates `Authorization: Bearer <token>`.
    * Decorator `@role_required(['Teacher', 'Admin'])`: Restricts endpoint access based on authenticated user roles.
@@ -288,23 +289,38 @@
 
 ---
 
+## 📅 Day 9: Live Cloud Backend Deployment on Render
+**Date:** Phase 9 (Current)  
+**Sprint Milestone:** Live HTTPS Production Backend Deployment & Cloud Bindings  
+
+### 🎯 Objectives
+* Deploy the Flask REST API application live to **Render Cloud Hosting**.
+* Configure cloud environment variables (`DATABASE_URL` for Neon PostgreSQL, `JWT_SECRET`).
+* Enable live production SSL/HTTPS endpoints for Android mobile clients.
+
+### 🛠️ Work Completed
+1. **Cloud Service Configuration**:
+   * Created Render Web Service instance bound to project repository.
+   * Configured Gunicorn WSGI server entrypoint (`gunicorn app:app`).
+   * Provisioned environment variables (`DATABASE_URL` pointing to Neon PostgreSQL cluster and secure `JWT_SECRET`).
+2. **API Verification**:
+   * Endpoint health check verified returning status 200 and Neon PostgreSQL connection confirmation over HTTPS.
+
+### 🧪 Verification & Outcome
+* Production cloud backend online and successfully responding to remote mobile requests over HTTPS.
+
+---
+
 ## 🎯 Upcoming Sprints & Next Tasks
 
-### 🚀 Sprint Task 1: Hosting Backend Online (Render / Vercel)
-* **Goal**: Deploy Flask REST API to cloud platform (Render / Vercel / Railway) with HTTPS/SSL.
-* **Deliverables**:
-  1. Production cloud deployment with environment variable bindings (`DATABASE_URL`, `JWT_SECRET`).
-  2. Public API HTTPS endpoint.
-  3. Update Android `ApiClient.java` `BASE_URL` to live cloud domain.
-
-### 🔔 Sprint Task 2: Firebase Cloud Messaging (FCM) Integration
+### 🔔 Sprint Task 1: Firebase Cloud Messaging (FCM) Integration
 * **Goal**: Enable push notifications when a teacher starts an attendance session.
 * **Deliverables**:
   1. Upload `firebase_credentials.json` to cloud server environment.
   2. Collect and store device FCM tokens upon student login.
   3. Send instant high-priority multicast push notifications to student phones.
 
-### 🔐 Sprint Task 3: Advanced Authentication & Login Security
+### 🔐 Sprint Task 2: Advanced Authentication & Login Security
 * **Goal**: Implement multi-factor security and biometric authentication.
 * **Deliverables**:
   1. **Biometric Authentication (Android)**: Require Fingerprint/FaceID verification before marking attendance.
@@ -315,10 +331,10 @@
 
 ## 📊 Summary of Overall Progress & Metrics
 
-![Progress](https://geps.dev/progress/90?dangerColor=8b0000&warningColor=fe8019&successColor=22c55e)
+![Progress](https://geps.dev/progress/95?dangerColor=8b0000&warningColor=fe8019&successColor=22c55e)
 
 ```
-[██████████████████████████████████████████████████████████░░] 90% Overall System Completion
+[████████████████████████████████████████████████████████████░] 95% Overall System Completion
 ```
 
 | Module | Status | Visual Progress | Highlights / Features |
@@ -326,10 +342,11 @@
 | **Database** | ✅ 100% Complete | `██████████` | **Neon PostgreSQL** serverless cloud DB, 7 tables, FKs, `setval` sequences. |
 | **ESP8266 Hardware** | ✅ 100% Complete | `██████████` | AP beacon broadcasting (`MCA_ROOM_101`), mDNS service responder. |
 | **Backend Security** | ✅ 100% Complete | `██████████` | Salted scrypt password hashing, JWT tokens, RBAC decorators. |
+| **Cloud Hosting** | ✅ 100% Complete | `██████████` | **Render Cloud Hosting** live production server over SSL/HTTPS. |
 | **Attendance APIs** | ✅ 100% Complete | `██████████` | `/start-session`, `/mark-attendance`, `/my-stats`, `/active-roster`. |
 | **Admin System** | ✅ 100% Complete | `██████████` | Full CRUD for Users, Subjects, Classrooms; Long-Press Delete; Refresh button. |
 | **Web Console** | ✅ 100% Complete | `██████████` | E2E automation runner, node visualizer, JSON inspector, event logger. |
 | **Android App** | ✅ 100% Complete | `██████████` | Student, Teacher, Admin dashboards, Wi-Fi scanner, live roster, stats bars. |
 
 ---
-*Scrum Log last updated for Day 8 completion.*
+*Scrum Log last updated for Day 9 completion.*

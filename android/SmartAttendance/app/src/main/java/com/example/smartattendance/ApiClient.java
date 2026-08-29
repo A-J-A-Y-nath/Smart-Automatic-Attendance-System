@@ -164,6 +164,23 @@ public class ApiClient {
         }
     }
 
+    public void updateFcmToken(String fcmToken, ApiCallback callback) {
+        try {
+            JSONObject json = new JSONObject();
+            json.put("fcm_token", fcmToken);
+
+            RequestBody body = RequestBody.create(json.toString(), JSON);
+            Request request = new Request.Builder()
+                    .url(BASE_URL + "/api/student/update-fcm-token")
+                    .post(body)
+                    .build();
+
+            executeRequest(request, callback);
+        } catch (JSONException e) {
+            callback.onError("JSON Build Error: " + e.getMessage());
+        }
+    }
+
     public void getProfile(ApiCallback callback) {
         Request request = new Request.Builder()
                 .url(BASE_URL + "/api/auth/me")
