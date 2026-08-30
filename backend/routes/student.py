@@ -112,13 +112,13 @@ def get_active_session():
         conn.close()
 
 @student_bp.route("/mark-attendance", methods=["POST"])
+@token_required
+@role_required(["Student"])
 def mark_attendance():
+    current_user = g.current_user
+    student_id = current_user["user_id"]
     data = request.get_json() or {}
-    student_id = data.get("student_id")
     session_id = data.get("session_id")
-
-    if not student_id:
-        return jsonify({"error": "Missing student_id"}), 400
 
     conn = get_connection()
     cursor = conn.cursor()

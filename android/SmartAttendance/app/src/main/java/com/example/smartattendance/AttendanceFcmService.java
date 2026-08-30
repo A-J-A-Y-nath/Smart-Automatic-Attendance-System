@@ -76,6 +76,12 @@ public class AttendanceFcmService extends FirebaseMessagingService {
             return;
         }
 
+        String role = prefsHelper.getUserRole();
+        if (role != null && !"Student".equalsIgnoreCase(role)) {
+            Log.w(TAG, "Logged-in user is not a Student (role: " + role + "). Skipping automatic attendance marking.");
+            return;
+        }
+
         int studentId = prefsHelper.getUserId();
         
         showNotification("Automatic Attendance", "Verifying presence and marking attendance for " + subjectName + "...", false);

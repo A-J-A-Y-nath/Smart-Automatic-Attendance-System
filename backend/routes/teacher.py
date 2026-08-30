@@ -92,14 +92,21 @@ def start_attendance_session():
 
         if existing_session:
             end_t = existing_session["end_time"]
-            rem_sec = int((end_t - now).total_seconds()) if end_t else 300
-            return jsonify({
-                "success": True,
-                "already_active": True,
-                "session_id": existing_session["id"],
-                "remaining_seconds": max(0, rem_sec),
-                "message": "Attendance session for this subject is ALREADY active!"
-            }), 200
+            rem_sec = int((end_t - now).total_seconds()) if end_t else 0
+            if rem_sec > 0:
+                return jsonify({
+                    "success": True,
+                    "already_active": True,
+                    "session_id": existing_session["id"],
+                    "remaining_seconds": rem_sec,
+                    "message": "Attendance session for this subject is ALREADY active!"
+                }), 200
+            else:
+                cursor.execute(
+                    "UPDATE attendance_sessions SET status = 'EXPIRED', end_time = %s WHERE id = %s",
+                    (now, existing_session["id"])
+                )
+                conn.commit()
 
         # Create new session with a 5-minute active window
         session_date = now.date()
@@ -243,6 +250,15 @@ def get_active_roster():
     conn = get_connection()
     cursor = conn.cursor()
     try:
+        now = datetime.datetime.now()
+
+        # Auto-expire any past sessions first
+        cursor.execute(
+            "UPDATE attendance_sessions SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND end_time IS NOT NULL AND end_time <= %s",
+            (now,)
+        )
+        conn.commit()
+
         # Find teacher's current active session
         cursor.execute(
             "SELECT id FROM attendance_sessions WHERE teacher_id = %s AND status = 'ACTIVE' ORDER BY id DESC LIMIT 1",
@@ -264,10 +280,17 @@ def get_active_roster():
             SELECT u.name as student_name, u.register_no, ar.attendance_time
             FROM attendance_records ar
             JOIN users u ON ar.student_id = u.id
-            WHERE ar.session_id = %s
+            WHERE ar.session_id = %s AND u.role = 'Student'
             ORDER BY ar.attendance_time ASC
         """, (session_id,))
         students = cursor.fetchall()
+
+        for s in students:
+            att_time = s.get("attendance_time")
+            if isinstance(att_time, (datetime.datetime, datetime.date)):
+                s["attendance_time"] = att_time.strftime("%I:%M:%S %p")
+            elif att_time is not None:
+                s["attendance_time"] = str(att_time)
 
         return jsonify({
             "status": "success",
