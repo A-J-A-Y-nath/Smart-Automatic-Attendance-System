@@ -9,6 +9,7 @@ from flask import Blueprint, jsonify, request, g
 from middleware.auth import token_required, role_required
 from database.db import get_connection
 import datetime
+from utils.fcm_service import send_multicast_attendance_alert
 
 IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
 
