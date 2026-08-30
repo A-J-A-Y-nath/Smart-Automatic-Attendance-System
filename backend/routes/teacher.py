@@ -140,12 +140,31 @@ def start_attendance_session():
                 rem_sec = 300
 
             if rem_sec > 0:
+                session_id = existing_session["id"]
+                cursor.execute("SELECT subject_name FROM subjects WHERE id = %s", (subject_id,))
+                subj_row = cursor.fetchone()
+                subject_name = subj_row["subject_name"] if subj_row else "Unknown Subject"
+
+                cursor.execute("SELECT fcm_token FROM users WHERE role = 'Student' AND fcm_token IS NOT NULL")
+                students = cursor.fetchall()
+                tokens = [s['fcm_token'] for s in students if s['fcm_token']]
+
+                success_count, failure_count = (0, 0)
+                if tokens:
+                    success_count, failure_count = send_multicast_attendance_alert(
+                        session_id=session_id,
+                        classroom_id=classroom_id,
+                        subject_name=subject_name,
+                        tokens=tokens
+                    )
+
                 return jsonify({
                     "success": True,
                     "already_active": True,
-                    "session_id": existing_session["id"],
+                    "session_id": session_id,
                     "remaining_seconds": rem_sec,
-                    "message": "Attendance session for this subject is ALREADY active!"
+                    "dispatched_count": success_count,
+                    "message": "Attendance session for this subject is ALREADY active! Class notification dispatched."
                 }), 200
             else:
                 cursor.execute(
