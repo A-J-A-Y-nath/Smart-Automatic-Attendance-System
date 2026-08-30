@@ -123,16 +123,16 @@ public class AttendanceFcmService extends FirebaseMessagingService {
 
             @Override
             public void onScanFailed() {
-                Log.w(TAG, "Wi-Fi beacon scan failed or Wi-Fi turned off. Skipping attendance.");
-                showNotification("Attendance Skipped", "Wi-Fi beacon scan failed. Ensure Wi-Fi & Location are ON.", false);
-                sendUiUpdateBroadcast("FAILED", "Wi-Fi beacon scan failed");
+                Log.w(TAG, "Wi-Fi beacon scan failed or Wi-Fi turned off.");
+                showNotification("Attendance Scan Error", "Ensure Wi-Fi & Location (GPS) are turned ON.", false);
+                sendUiUpdateBroadcast("FAILED", "Wi-Fi or Location is disabled");
             }
 
             @Override
             public void onScanFinished() {
-                Log.w(TAG, "No classroom Wi-Fi beacon found. Skipping attendance.");
-                showNotification("Attendance Skipped", "Classroom Wi-Fi Beacon not detected near you for " + subjectName, false);
-                sendUiUpdateBroadcast("FAILED", "Classroom beacon not detected");
+                Log.w(TAG, "No classroom Wi-Fi beacon found. Student is Absent.");
+                showNotification("Status: Absent", "Classroom Wi-Fi Beacon not in range for " + subjectName, false);
+                sendUiUpdateBroadcast("ABSENT", "Classroom beacon not in range");
             }
         });
     }

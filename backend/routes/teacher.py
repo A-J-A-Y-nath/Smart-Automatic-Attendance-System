@@ -183,6 +183,19 @@ def start_attendance_session():
             (subject_id, classroom_id, teacher_id, session_date, start_time, end_time)
         )
         session_id = cursor.fetchone()["id"]
+        
+        # Initialize default ABSENT status for enrolled students in this subject
+        cursor.execute(
+            """
+            INSERT INTO attendance_records (session_id, student_id, status)
+            SELECT %s, u.id, 'ABSENT'
+            FROM users u
+            JOIN subjects sub ON (u.department_id = sub.department_id AND u.semester = sub.semester)
+            WHERE sub.id = %s AND u.role = 'Student'
+            ON CONFLICT (session_id, student_id) DO NOTHING
+            """,
+            (session_id, subject_id)
+        )
         conn.commit()
 
         # Get subject name for notification payload
@@ -346,7 +359,7 @@ def get_active_roster():
             SELECT u.name as student_name, u.register_no, ar.attendance_time
             FROM attendance_records ar
             JOIN users u ON ar.student_id = u.id
-            WHERE ar.session_id = %s AND u.role = 'Student'
+            WHERE ar.session_id = %s AND ar.status = 'PRESENT' AND u.role = 'Student'
             ORDER BY ar.attendance_time ASC
         """, (session_id,))
         students = cursor.fetchall()

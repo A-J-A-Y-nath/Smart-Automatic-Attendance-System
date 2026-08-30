@@ -137,33 +137,35 @@ public class WifiScanner {
     private boolean isMatchingBeacon(String detectedSsid) {
         if (detectedSsid == null || detectedSsid.trim().isEmpty()) return false;
         
-        String lowerDetected = detectedSsid.trim().toLowerCase();
+        String cleanDetected = detectedSsid.replace("\"", "").replace("'", "").trim().toLowerCase();
         
         // 1. Exact or direct match with the target classroom SSID (e.g. esp8266-mca101, MCA_ROOM_101)
         if (targetSsidFilter != null && !targetSsidFilter.trim().isEmpty()) {
-            String lowerTarget = targetSsidFilter.trim().toLowerCase();
-            if (lowerDetected.equalsIgnoreCase(lowerTarget) || 
-                lowerDetected.equals(lowerTarget)) {
+            String cleanTarget = targetSsidFilter.replace("\"", "").replace("'", "").trim().toLowerCase();
+            if (cleanDetected.equals(cleanTarget) || cleanDetected.contains(cleanTarget) || cleanTarget.contains(cleanDetected)) {
                 return true;
             }
         }
 
         // 2. Strict hardware beacon prefixes ONLY (NO generic "wifi" or "room")
-        return lowerDetected.contains("esp8266") ||
-               lowerDetected.contains("mca_room_") ||
-               lowerDetected.startsWith("beacon_");
+        return cleanDetected.contains("esp8266") ||
+               cleanDetected.contains("mca_room_") ||
+               cleanDetected.startsWith("beacon_") ||
+               cleanDetected.startsWith("mca_");
     }
 
     @SuppressLint("MissingPermission")
     private void scanSuccess(ScanCallback callback) {
         List<ScanResult> results = wifiManager.getScanResults();
-        Log.d(TAG, "Scan succeeded. Found " + results.size() + " networks.");
+        Log.d(TAG, "Scan succeeded. Found " + (results != null ? results.size() : 0) + " networks.");
         
-        for (ScanResult result : results) {
-            Log.d(TAG, "Detected SSID: " + result.SSID + " (RSSI: " + result.level + ")");
-            if (isMatchingBeacon(result.SSID)) {
-                callback.onBeaconFound(result.SSID, result.level);
-                return;
+        if (results != null) {
+            for (ScanResult result : results) {
+                Log.d(TAG, "Detected SSID: " + result.SSID + " (RSSI: " + result.level + ")");
+                if (isMatchingBeacon(result.SSID)) {
+                    callback.onBeaconFound(result.SSID, result.level);
+                    return;
+                }
             }
         }
         callback.onScanFinished();
@@ -171,7 +173,7 @@ public class WifiScanner {
 
     @SuppressLint("MissingPermission")
     private void scanFailure(ScanCallback callback) {
-        Log.e(TAG, "Scan failed (e.g. throttled). Checking old results.");
+        Log.d(TAG, "Scan notification not updated or throttled. Checking available scan results.");
         try {
             List<ScanResult> results = wifiManager != null ? wifiManager.getScanResults() : null;
             if (results != null) {
@@ -181,6 +183,9 @@ public class WifiScanner {
                         return;
                     }
                 }
+                // Scan results were readable, but beacon was simply not detected
+                callback.onScanFinished();
+                return;
             }
         } catch (Exception e) {
             Log.e(TAG, "Error fetching scan results: " + e.getMessage());

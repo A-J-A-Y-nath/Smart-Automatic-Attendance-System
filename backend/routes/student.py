@@ -173,14 +173,14 @@ def mark_attendance():
                     "message": f"Detected SSID '{detected_ssid}' does not match classroom beacon '{target_ssid}'. Attendance denied."
                 }), 200
 
-        # Check if student has already marked attendance for this session
+        # Check if student has already marked attendance as PRESENT for this session
         cursor.execute(
-            "SELECT id FROM attendance_records WHERE session_id = %s AND student_id = %s",
+            "SELECT id, status FROM attendance_records WHERE session_id = %s AND student_id = %s",
             (resolved_session_id, student_id)
         )
-        already_marked = cursor.fetchone()
+        existing_record = cursor.fetchone()
 
-        if already_marked:
+        if existing_record and existing_record.get("status") == "PRESENT":
             return jsonify({
                 "success": True,
                 "already_marked": True,
@@ -189,7 +189,12 @@ def mark_attendance():
             }), 200
 
         cursor.execute(
-            "INSERT INTO attendance_records (session_id, student_id, status) VALUES (%s, %s, 'PRESENT')",
+            """
+            INSERT INTO attendance_records (session_id, student_id, status, attendance_time) 
+            VALUES (%s, %s, 'PRESENT', CURRENT_TIMESTAMP)
+            ON CONFLICT (session_id, student_id) 
+            DO UPDATE SET status = 'PRESENT', attendance_time = CURRENT_TIMESTAMP
+            """,
             (resolved_session_id, student_id)
         )
         conn.commit()

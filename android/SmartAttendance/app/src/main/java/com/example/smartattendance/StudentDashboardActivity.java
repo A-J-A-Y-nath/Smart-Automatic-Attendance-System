@@ -1,6 +1,7 @@
 package com.example.smartattendance;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
@@ -291,6 +292,35 @@ public class StudentDashboardActivity extends AppCompatActivity {
             return;
         }
 
+        // 2. Check if Wi-Fi is enabled
+        android.net.wifi.WifiManager wifiManager = (android.net.wifi.WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        if (wifiManager == null || !wifiManager.isWifiEnabled()) {
+            tvStatus.setText("Wi-Fi is turned OFF.\nPlease turn ON Wi-Fi to scan beacon.");
+            Toast.makeText(this, "Please turn ON Wi-Fi in Quick Settings to scan for beacon.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // 3. Check if Location Services (GPS) is enabled (Android requirement for Wi-Fi SSID scanning)
+        android.location.LocationManager locationManager = (android.location.LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        boolean isLocationEnabled = false;
+        if (locationManager != null) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                isLocationEnabled = locationManager.isLocationEnabled();
+            } else {
+                isLocationEnabled = locationManager.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) ||
+                                    locationManager.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER);
+            }
+        }
+
+        if (!isLocationEnabled) {
+            tvStatus.setText("Location (GPS) is OFF.\nPlease turn ON Location in settings.");
+            Toast.makeText(this, "Android requires Location (GPS) ON to detect Wi-Fi beacons.", Toast.LENGTH_LONG).show();
+            try {
+                startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+            } catch (Exception ignored) {}
+            return;
+        }
+
         tvStatus.setText("Scanning for beacon...");
         btnScan.setEnabled(false);
         progressBar.setVisibility(View.VISIBLE);
@@ -307,15 +337,15 @@ public class StudentDashboardActivity extends AppCompatActivity {
                 progressBar.setVisibility(View.GONE);
                 btnScan.setEnabled(true);
                 tvStatus.setText("Scan failed. Ensure Wi-Fi & Location (GPS) are ON.");
-                Toast.makeText(StudentDashboardActivity.this, "Scan failed. Please turn ON Wi-Fi and Location (GPS).", Toast.LENGTH_LONG).show();
+                Toast.makeText(StudentDashboardActivity.this, "Scan failed. Ensure Wi-Fi & Location are enabled.", Toast.LENGTH_LONG).show();
             }
 
             @Override
             public void onScanFinished() {
                 progressBar.setVisibility(View.GONE);
                 btnScan.setEnabled(true);
-                tvStatus.setText("Scan finished. No beacon found.");
-                Toast.makeText(StudentDashboardActivity.this, "Classroom Wi-Fi beacon not detected near you.", Toast.LENGTH_SHORT).show();
+                tvStatus.setText("Absent\nClassroom beacon not in range.");
+                Toast.makeText(StudentDashboardActivity.this, "Classroom Wi-Fi beacon not detected near you (Status: Absent).", Toast.LENGTH_LONG).show();
             }
         });
     }
