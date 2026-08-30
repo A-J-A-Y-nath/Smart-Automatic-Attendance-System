@@ -73,8 +73,7 @@ def get_active_session():
 
         # 1. Auto-expire old sessions
         cursor.execute(
-            "UPDATE attendance_sessions SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND end_time IS NOT NULL AND end_time <= %s",
-            (now,)
+            "UPDATE attendance_sessions SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND end_time IS NOT NULL AND end_time <= CURRENT_TIMESTAMP"
         )
         conn.commit()
 
@@ -100,7 +99,11 @@ def get_active_session():
         session = cursor.fetchone()
         if session:
             end_t = session.get("end_time")
-            rem_sec = int((end_t - now).total_seconds()) if end_t else 300
+            if end_t:
+                now_cmp = datetime.datetime.now(end_t.tzinfo) if end_t.tzinfo else datetime.datetime.now()
+                rem_sec = int((end_t - now_cmp).total_seconds())
+            else:
+                rem_sec = 300
             session["remaining_seconds"] = max(0, rem_sec)
             return jsonify({"status": "success", "active_session": session}), 200
         else:
@@ -128,8 +131,7 @@ def mark_attendance():
 
         # 1. Auto-expire old sessions first
         cursor.execute(
-            "UPDATE attendance_sessions SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND end_time IS NOT NULL AND end_time <= %s",
-            (now,)
+            "UPDATE attendance_sessions SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND end_time IS NOT NULL AND end_time <= CURRENT_TIMESTAMP"
         )
         conn.commit()
 

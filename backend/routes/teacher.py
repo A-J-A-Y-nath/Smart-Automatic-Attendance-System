@@ -90,8 +90,7 @@ def start_attendance_session():
 
         # Auto-expire any past sessions that exceeded their end_time
         cursor.execute(
-            "UPDATE attendance_sessions SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND end_time IS NOT NULL AND end_time <= %s",
-            (now,)
+            "UPDATE attendance_sessions SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND end_time IS NOT NULL AND end_time <= CURRENT_TIMESTAMP"
         )
         
         # Close any active session for this teacher for OTHER subjects
@@ -113,7 +112,12 @@ def start_attendance_session():
 
         if existing_session:
             end_t = existing_session["end_time"]
-            rem_sec = int((end_t - now).total_seconds()) if end_t else 0
+            if end_t:
+                now_cmp = datetime.datetime.now(end_t.tzinfo) if end_t.tzinfo else datetime.datetime.now()
+                rem_sec = int((end_t - now_cmp).total_seconds())
+            else:
+                rem_sec = 300
+
             if rem_sec > 0:
                 return jsonify({
                     "success": True,
@@ -124,8 +128,8 @@ def start_attendance_session():
                 }), 200
             else:
                 cursor.execute(
-                    "UPDATE attendance_sessions SET status = 'EXPIRED', end_time = %s WHERE id = %s",
-                    (now, existing_session["id"])
+                    "UPDATE attendance_sessions SET status = 'EXPIRED', end_time = CURRENT_TIMESTAMP WHERE id = %s",
+                    (existing_session["id"],)
                 )
                 conn.commit()
 
@@ -277,8 +281,7 @@ def get_active_roster():
 
         # Auto-expire any past sessions first
         cursor.execute(
-            "UPDATE attendance_sessions SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND end_time IS NOT NULL AND end_time <= %s",
-            (now,)
+            "UPDATE attendance_sessions SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND end_time IS NOT NULL AND end_time <= CURRENT_TIMESTAMP"
         )
         conn.commit()
 

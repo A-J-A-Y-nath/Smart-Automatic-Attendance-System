@@ -464,8 +464,7 @@ def admin_start_session():
     try:
         now = datetime.datetime.now()
         cursor.execute(
-            "UPDATE attendance_sessions SET status='EXPIRED' WHERE status='ACTIVE' AND end_time IS NOT NULL AND end_time<=%s",
-            (now,)
+            "UPDATE attendance_sessions SET status='EXPIRED' WHERE status='ACTIVE' AND end_time IS NOT NULL AND end_time<=CURRENT_TIMESTAMP"
         )
         cursor.execute(
             "SELECT id FROM attendance_sessions WHERE teacher_id=%s AND subject_id=%s AND status='ACTIVE'",
