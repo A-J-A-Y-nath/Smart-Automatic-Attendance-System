@@ -40,6 +40,7 @@ public class StudentDashboardActivity extends AppCompatActivity {
     
     private int currentStudentId = -1; 
     private int currentSessionId = -1; 
+    private String currentTargetSsid = null;
     private CountDownTimer studentTimer;
     private android.content.BroadcastReceiver attendanceUpdateReceiver;
 
@@ -228,6 +229,7 @@ public class StudentDashboardActivity extends AppCompatActivity {
                     String subCode = session.optString("subject_code", "");
                     String teacherName = session.optString("teacher_name", "");
                     String roomName = session.optString("room_name", "");
+                    currentTargetSsid = session.optString("target_ssid", "");
                     int remSec = session.optInt("remaining_seconds", 300);
                     boolean isNewSession = (currentSessionId != session.optInt("session_id", -1));
                     currentSessionId = session.optInt("session_id", -1);
@@ -293,11 +295,11 @@ public class StudentDashboardActivity extends AppCompatActivity {
         btnScan.setEnabled(false);
         progressBar.setVisibility(View.VISIBLE);
 
-        wifiScanner.startScan(new WifiScanner.ScanCallback() {
+        wifiScanner.startScan(currentTargetSsid, new WifiScanner.ScanCallback() {
             @Override
             public void onBeaconFound(String ssid, int rssi) {
                 tvStatus.setText("Beacon Found (" + ssid + ")!\nMarking attendance...");
-                markAttendance();
+                markAttendance(ssid);
             }
 
             @Override
@@ -313,7 +315,7 @@ public class StudentDashboardActivity extends AppCompatActivity {
                 progressBar.setVisibility(View.GONE);
                 btnScan.setEnabled(true);
                 tvStatus.setText("Scan finished. No beacon found.");
-                Toast.makeText(StudentDashboardActivity.this, "No classroom beacon found near you.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(StudentDashboardActivity.this, "Classroom Wi-Fi beacon not detected near you.", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -330,8 +332,8 @@ public class StudentDashboardActivity extends AppCompatActivity {
         }
     }
 
-    private void markAttendance() {
-        ApiClient.getInstance(this).markAttendance(currentSessionId, currentStudentId, new ApiClient.ApiCallback() {
+    private void markAttendance(String detectedSsid) {
+        ApiClient.getInstance(this).markAttendance(currentSessionId, currentStudentId, detectedSsid, new ApiClient.ApiCallback() {
             @Override
             public void onSuccess(JSONObject response) {
                 progressBar.setVisibility(View.GONE);

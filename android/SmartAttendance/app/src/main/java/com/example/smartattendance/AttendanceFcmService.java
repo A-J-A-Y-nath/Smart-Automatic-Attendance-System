@@ -94,7 +94,7 @@ public class AttendanceFcmService extends FirebaseMessagingService {
                 Log.d(TAG, "Classroom Wi-Fi beacon detected (" + ssid + "). Marking attendance...");
                 showNotification("Automatic Attendance", "Classroom Beacon verified (" + ssid + "). Marking attendance for " + subjectName + "...", false);
 
-                ApiClient.getInstance(getApplicationContext()).markAttendance(sessionId, studentId, new ApiClient.ApiCallback() {
+                ApiClient.getInstance(getApplicationContext()).markAttendance(sessionId, studentId, ssid, new ApiClient.ApiCallback() {
                     @Override
                     public void onSuccess(JSONObject response) {
                         boolean success = response.optBoolean("success", true);

@@ -136,19 +136,42 @@ def mark_attendance():
         conn.commit()
 
         # 2. Check if requested session is active or fetch latest ACTIVE session
-        active_session = None
+        sql = """
+            SELECT s.id, s.status, c.ssid as target_ssid 
+            FROM attendance_sessions s
+            JOIN classrooms c ON s.classroom_id = c.id
+            WHERE s.status = 'ACTIVE'
+        """
         if session_id and session_id != -1:
-            cursor.execute("SELECT id, status FROM attendance_sessions WHERE id = %s AND status = 'ACTIVE'", (session_id,))
-            active_session = cursor.fetchone()
-
-        if not active_session:
-            cursor.execute("SELECT id, status FROM attendance_sessions WHERE status = 'ACTIVE' ORDER BY id DESC LIMIT 1")
-            active_session = cursor.fetchone()
+            cursor.execute(sql + " AND s.id = %s", (session_id,))
+        else:
+            cursor.execute(sql + " ORDER BY s.id DESC LIMIT 1")
+            
+        active_session = cursor.fetchone()
 
         if not active_session:
             return jsonify({"success": False, "message": "No active class session currently. Please ask your teacher to start attendance!"}), 200
 
         resolved_session_id = active_session["id"]
+        target_ssid = (active_session.get("target_ssid") or "").strip()
+
+        # 3. Beacon Verification: Ensure student device detected/passed the classroom beacon SSID
+        detected_ssid = (data.get("ssid") or data.get("beacon_ssid") or "").strip()
+        if target_ssid:
+            if not detected_ssid:
+                return jsonify({
+                    "success": False, 
+                    "message": "Classroom Wi-Fi beacon signal not detected near you. Attendance denied."
+                }), 200
+            
+            # Check SSID match
+            lower_detected = detected_ssid.lower()
+            lower_target = target_ssid.lower()
+            if lower_detected != lower_target and lower_target not in lower_detected and lower_detected not in lower_target:
+                return jsonify({
+                    "success": False, 
+                    "message": f"Detected SSID '{detected_ssid}' does not match classroom beacon '{target_ssid}'. Attendance denied."
+                }), 200
 
         # Check if student has already marked attendance for this session
         cursor.execute(

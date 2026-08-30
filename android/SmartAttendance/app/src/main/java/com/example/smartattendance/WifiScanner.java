@@ -93,12 +93,6 @@ public class WifiScanner {
             return;
         }
 
-        // Check if currently connected Wi-Fi or cached scan results already match the beacon
-        if (checkConnectedOrCachedBeacon(callback)) {
-            Log.d(TAG, "Beacon matched from current connection or cache!");
-            return;
-        }
-
         wifiScanReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context c, Intent intent) {
@@ -141,18 +135,23 @@ public class WifiScanner {
     }
 
     private boolean isMatchingBeacon(String detectedSsid) {
-        if (detectedSsid == null || detectedSsid.isEmpty()) return false;
-        if (targetSsidFilter != null && !targetSsidFilter.isEmpty()) {
-            if (detectedSsid.equalsIgnoreCase(targetSsidFilter) || 
-                detectedSsid.toLowerCase().contains(targetSsidFilter.toLowerCase()) ||
-                targetSsidFilter.toLowerCase().contains(detectedSsid.toLowerCase())) {
+        if (detectedSsid == null || detectedSsid.trim().isEmpty()) return false;
+        
+        String lowerDetected = detectedSsid.trim().toLowerCase();
+        
+        // 1. Exact or direct match with the target classroom SSID (e.g. esp8266-mca101, MCA_ROOM_101)
+        if (targetSsidFilter != null && !targetSsidFilter.trim().isEmpty()) {
+            String lowerTarget = targetSsidFilter.trim().toLowerCase();
+            if (lowerDetected.equalsIgnoreCase(lowerTarget) || 
+                lowerDetected.equals(lowerTarget)) {
                 return true;
             }
         }
-        return detectedSsid.contains(TARGET_SSID_PREFIX) || 
-               detectedSsid.toLowerCase().contains("esp8266") ||
-               detectedSsid.toLowerCase().contains("beacon") ||
-               detectedSsid.toLowerCase().contains("mca_room");
+
+        // 2. Strict hardware beacon prefixes ONLY (NO generic "wifi" or "room")
+        return lowerDetected.contains("esp8266") ||
+               lowerDetected.contains("mca_room_") ||
+               lowerDetected.startsWith("beacon_");
     }
 
     @SuppressLint("MissingPermission")

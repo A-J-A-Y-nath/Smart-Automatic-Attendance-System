@@ -147,10 +147,18 @@ public class ApiClient {
     }
 
     public void markAttendance(int sessionId, int studentId, ApiCallback callback) {
+        markAttendance(sessionId, studentId, null, callback);
+    }
+
+    public void markAttendance(int sessionId, int studentId, String ssid, ApiCallback callback) {
         try {
             JSONObject json = new JSONObject();
             json.put("session_id", sessionId);
             json.put("student_id", studentId);
+            if (ssid != null && !ssid.isEmpty()) {
+                json.put("ssid", ssid);
+                json.put("beacon_ssid", ssid);
+            }
 
             RequestBody body = RequestBody.create(json.toString(), JSON);
             Request request = new Request.Builder()
