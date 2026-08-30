@@ -9,7 +9,28 @@ from flask import Blueprint, jsonify, request, g
 from middleware.auth import token_required, role_required
 from database.db import get_connection
 import datetime
-from utils.fcm_service import send_multicast_attendance_alert
+
+IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+
+def format_to_ist(dt):
+    if dt is None:
+        return ""
+    if isinstance(dt, datetime.datetime):
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
+        dt_ist = dt.astimezone(IST)
+        return dt_ist.strftime("%I:%M:%S %p")
+    elif isinstance(dt, datetime.date):
+        return dt.strftime("%Y-%m-%d")
+    elif isinstance(dt, str):
+        try:
+            parsed = datetime.datetime.fromisoformat(dt)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+            return parsed.astimezone(IST).strftime("%I:%M:%S %p")
+        except Exception:
+            return dt
+    return str(dt)
 
 teacher_bp = Blueprint("teacher", __name__, url_prefix="/api/teacher")
 
@@ -195,6 +216,8 @@ def get_session_records(session_id):
         """
         cursor.execute(sql, (session_id,))
         records = cursor.fetchall()
+        for r in records:
+            r["attendance_time"] = format_to_ist(r.get("attendance_time"))
         return jsonify({"status": "success", "records": records}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -286,11 +309,7 @@ def get_active_roster():
         students = cursor.fetchall()
 
         for s in students:
-            att_time = s.get("attendance_time")
-            if isinstance(att_time, (datetime.datetime, datetime.date)):
-                s["attendance_time"] = att_time.strftime("%I:%M:%S %p")
-            elif att_time is not None:
-                s["attendance_time"] = str(att_time)
+            s["attendance_time"] = format_to_ist(s.get("attendance_time"))
 
         return jsonify({
             "status": "success",
@@ -298,6 +317,59 @@ def get_active_roster():
             "session_id": session_id,
             "present_count": len(students),
             "students": students
+        }), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@teacher_bp.route("/subject-history/<int:subject_id>", methods=["GET"])
+@token_required
+@role_required(["Teacher"])
+def get_subject_history(subject_id):
+    """
+    GET /api/teacher/subject-history/<subject_id>
+    Returns past attendance sessions and present students for the given subject.
+    """
+    current_user = g.current_user
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT s.id as session_id, s.session_date, s.start_time, s.end_time, s.status,
+                   c.room_name,
+                   (SELECT COUNT(*) FROM attendance_records ar WHERE ar.session_id = s.id) as present_count
+            FROM attendance_sessions s
+            JOIN classrooms c ON s.classroom_id = c.id
+            WHERE s.subject_id = %s AND s.teacher_id = %s
+            ORDER BY s.session_date DESC, s.start_time DESC
+            LIMIT 15
+        """, (subject_id, current_user["user_id"]))
+        sessions = cursor.fetchall()
+
+        for sess in sessions:
+            sess["start_time_formatted"] = format_to_ist(sess.get("start_time"))
+            sess["end_time_formatted"] = format_to_ist(sess.get("end_time"))
+            sess["session_date"] = str(sess.get("session_date")) if sess.get("session_date") else ""
+            
+            cursor.execute("""
+                SELECT u.name as student_name, u.register_no, ar.attendance_time
+                FROM attendance_records ar
+                JOIN users u ON ar.student_id = u.id
+                WHERE ar.session_id = %s AND u.role = 'Student'
+                ORDER BY ar.attendance_time ASC
+            """, (sess["session_id"],))
+            students = cursor.fetchall()
+            for st in students:
+                st["attendance_time"] = format_to_ist(st.get("attendance_time"))
+            sess["students"] = students
+
+        return jsonify({
+            "status": "success",
+            "subject_id": subject_id,
+            "sessions": sessions
         }), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500

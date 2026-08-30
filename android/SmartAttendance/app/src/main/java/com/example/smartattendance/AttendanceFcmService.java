@@ -70,15 +70,15 @@ public class AttendanceFcmService extends FirebaseMessagingService {
     private void handleAutomaticAttendance(int sessionId, String subjectName) {
         PrefsHelper prefsHelper = new PrefsHelper(getApplicationContext());
         
-        if (!prefsHelper.isLoggedIn()) {
-            Log.w(TAG, "Student is not logged in. Skipping automatic attendance marking.");
-            showNotification("Attendance Session Started", "Please login to mark attendance for " + subjectName, false);
+        String role = prefsHelper.getUserRole();
+        // Ignore FCM attendance triggers silently for Teachers and Admins
+        if (role != null && !"Student".equalsIgnoreCase(role.trim())) {
+            Log.d(TAG, "Logged-in user is not a Student (role: " + role + "). Skipping automatic attendance marking silently.");
             return;
         }
 
-        String role = prefsHelper.getUserRole();
-        if (role != null && !"Student".equalsIgnoreCase(role)) {
-            Log.w(TAG, "Logged-in user is not a Student (role: " + role + "). Skipping automatic attendance marking.");
+        if (!prefsHelper.isLoggedIn()) {
+            Log.w(TAG, "User is not logged in as Student. Skipping automatic attendance marking.");
             return;
         }
 

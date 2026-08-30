@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ProgressBar;
@@ -95,6 +96,10 @@ public class TeacherDashboardActivity extends AppCompatActivity {
             fetchProfile();
             checkActiveSession();
             fetchActiveRoster();
+            if (spinnerSubject.getSelectedItem() != null) {
+                SubjectItem sel = (SubjectItem) spinnerSubject.getSelectedItem();
+                fetchSubjectHistory(sel.id);
+            }
             Toast.makeText(this, "Refreshed status", Toast.LENGTH_SHORT).show();
         });
 
@@ -241,6 +246,24 @@ public class TeacherDashboardActivity extends AppCompatActivity {
                         subjectList
                     );
                     spinnerSubject.setAdapter(adapter);
+
+                    spinnerSubject.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                        @Override
+                        public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                            if (position >= 0 && position < subjectList.size()) {
+                                SubjectItem item = subjectList.get(position);
+                                fetchSubjectHistory(item.id);
+                            }
+                        }
+
+                        @Override
+                        public void onNothingSelected(AdapterView<?> parent) {}
+                    });
+
+                    if (!subjectList.isEmpty()) {
+                        fetchSubjectHistory(subjectList.get(0).id);
+                    }
+
                     // Now that spinner is populated, check for an active session to sync to
                     checkActiveSession();
 
@@ -407,6 +430,68 @@ public class TeacherDashboardActivity extends AppCompatActivity {
             @Override
             public void onError(String errorMessage) {
                 tvRosterList.setText("Roster unavailable (" + errorMessage + ")");
+            }
+        });
+    }
+
+    private void fetchSubjectHistory(int subjectId) {
+        TextView tvHistoryList = findViewById(R.id.tvHistoryList);
+        if (tvHistoryList == null) return;
+
+        tvHistoryList.setText("Loading attendance history...");
+
+        ApiClient.getInstance(this).getSubjectHistory(subjectId, new ApiClient.ApiCallback() {
+            @Override
+            public void onSuccess(JSONObject response) {
+                try {
+                    JSONArray sessions = response.optJSONArray("sessions");
+                    if (sessions == null || sessions.length() == 0) {
+                        tvHistoryList.setText("No previous attendance records found for this subject.");
+                        return;
+                    }
+
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < sessions.length(); i++) {
+                        JSONObject sess = sessions.getJSONObject(i);
+                        String sDate = sess.optString("session_date", "N/A");
+                        String startTime = sess.optString("start_time_formatted", "");
+                        String room = sess.optString("room_name", "");
+                        int count = sess.optInt("present_count", 0);
+
+                        sb.append("📅 Date: ").append(sDate)
+                          .append("  (").append(startTime).append(")\n")
+                          .append("Room: ").append(room.isEmpty() ? "N/A" : room)
+                          .append("  •  Present Students: ").append(count).append("\n");
+
+                        JSONArray students = sess.optJSONArray("students");
+                        if (students != null && students.length() > 0) {
+                            for (int j = 0; j < students.length(); j++) {
+                                JSONObject st = students.getJSONObject(j);
+                                String name = st.optString("student_name", "Student");
+                                String regNo = st.optString("register_no", "");
+                                String time = st.optString("attendance_time", "");
+
+                                sb.append("  └ ").append(j + 1).append(". ").append(name)
+                                  .append(" (").append(regNo.isEmpty() ? "N/A" : regNo).append(")")
+                                  .append(" • ").append(time).append("\n");
+                            }
+                        } else {
+                            sb.append("  └ No students marked present.\n");
+                        }
+                        if (i < sessions.length() - 1) {
+                            sb.append("\n----------------------------------------\n\n");
+                        }
+                    }
+                    tvHistoryList.setText(sb.toString().trim());
+
+                } catch (JSONException e) {
+                    tvHistoryList.setText("Error parsing history records.");
+                }
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                tvHistoryList.setText("History unavailable (" + errorMessage + ")");
             }
         });
     }
