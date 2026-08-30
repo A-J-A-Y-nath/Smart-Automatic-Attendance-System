@@ -6,7 +6,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.wifi.ScanResult;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.util.Log;
 
 import java.util.List;
@@ -38,6 +40,46 @@ public class WifiScanner {
         startScan(callback);
     }
 
+    @SuppressLint("MissingPermission")
+    public boolean checkConnectedOrCachedBeacon(ScanCallback callback) {
+        if (wifiManager == null) return false;
+        
+        // 1. Check currently connected Wi-Fi network SSID
+        try {
+            WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+            if (wifiInfo != null) {
+                String connectedSsid = wifiInfo.getSSID();
+                if (connectedSsid != null) {
+                    connectedSsid = connectedSsid.replace("\"", "").trim();
+                    Log.d(TAG, "Connected Wi-Fi SSID: " + connectedSsid);
+                    if (isMatchingBeacon(connectedSsid)) {
+                        callback.onBeaconFound(connectedSsid, wifiInfo.getRssi());
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking connected Wi-Fi: " + e.getMessage());
+        }
+
+        // 2. Check cached scan results
+        try {
+            List<ScanResult> results = wifiManager.getScanResults();
+            if (results != null) {
+                for (ScanResult result : results) {
+                    if (isMatchingBeacon(result.SSID)) {
+                        callback.onBeaconFound(result.SSID, result.level);
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking cached scan results: " + e.getMessage());
+        }
+
+        return false;
+    }
+
     public void startScan(final ScanCallback callback) {
         if (wifiManager == null) {
             Log.e(TAG, "WifiManager is null");
@@ -48,6 +90,12 @@ public class WifiScanner {
         if (!wifiManager.isWifiEnabled()) {
             Log.w(TAG, "Wi-Fi is disabled, cannot scan.");
             callback.onScanFailed();
+            return;
+        }
+
+        // Check if currently connected Wi-Fi or cached scan results already match the beacon
+        if (checkConnectedOrCachedBeacon(callback)) {
+            Log.d(TAG, "Beacon matched from current connection or cache!");
             return;
         }
 
@@ -71,7 +119,16 @@ public class WifiScanner {
 
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
-        context.registerReceiver(wifiScanReceiver, intentFilter);
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.registerReceiver(wifiScanReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
+            } else {
+                context.registerReceiver(wifiScanReceiver, intentFilter);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error registering wifi scan receiver: " + e.getMessage());
+        }
 
         @SuppressLint("MissingPermission") 
         boolean success = wifiManager.startScan();

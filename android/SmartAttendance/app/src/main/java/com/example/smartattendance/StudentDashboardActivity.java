@@ -229,6 +229,7 @@ public class StudentDashboardActivity extends AppCompatActivity {
                     String teacherName = session.optString("teacher_name", "");
                     String roomName = session.optString("room_name", "");
                     int remSec = session.optInt("remaining_seconds", 300);
+                    boolean isNewSession = (currentSessionId != session.optInt("session_id", -1));
                     currentSessionId = session.optInt("session_id", -1);
 
                     if (studentTimer != null) studentTimer.cancel();
@@ -247,6 +248,10 @@ public class StudentDashboardActivity extends AppCompatActivity {
                             btnScan.setEnabled(false);
                         }
                     }.start();
+
+                    if (isNewSession) {
+                        startScanning();
+                    }
 
                 } else {
                     currentSessionId = -1;
