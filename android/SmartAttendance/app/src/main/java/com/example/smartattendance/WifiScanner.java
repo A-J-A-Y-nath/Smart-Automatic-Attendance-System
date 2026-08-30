@@ -31,6 +31,13 @@ public class WifiScanner {
         this.wifiManager = (WifiManager) this.context.getSystemService(Context.WIFI_SERVICE);
     }
 
+    private String targetSsidFilter = null;
+
+    public void startScan(final String targetSsid, final ScanCallback callback) {
+        this.targetSsidFilter = targetSsid;
+        startScan(callback);
+    }
+
     public void startScan(final ScanCallback callback) {
         if (wifiManager == null) {
             Log.e(TAG, "WifiManager is null");
@@ -40,7 +47,6 @@ public class WifiScanner {
 
         if (!wifiManager.isWifiEnabled()) {
             Log.w(TAG, "Wi-Fi is disabled, cannot scan.");
-            // Optionally, prompt user to enable Wi-Fi. In newer Android versions, apps cannot enable it programmatically.
             callback.onScanFailed();
             return;
         }
@@ -55,11 +61,10 @@ public class WifiScanner {
                     scanFailure(callback);
                 }
                 
-                // Unregister after one scan
                 try {
                     context.unregisterReceiver(this);
                 } catch (IllegalArgumentException e) {
-                    // Ignore if already unregistered
+                    // Ignore
                 }
             }
         };
@@ -71,12 +76,26 @@ public class WifiScanner {
         @SuppressLint("MissingPermission") 
         boolean success = wifiManager.startScan();
         if (!success) {
-            // Scan failed to start, immediately fallback
             scanFailure(callback);
             try {
                 context.unregisterReceiver(wifiScanReceiver);
             } catch (Exception ignored) {}
         }
+    }
+
+    private boolean isMatchingBeacon(String detectedSsid) {
+        if (detectedSsid == null || detectedSsid.isEmpty()) return false;
+        if (targetSsidFilter != null && !targetSsidFilter.isEmpty()) {
+            if (detectedSsid.equalsIgnoreCase(targetSsidFilter) || 
+                detectedSsid.toLowerCase().contains(targetSsidFilter.toLowerCase()) ||
+                targetSsidFilter.toLowerCase().contains(detectedSsid.toLowerCase())) {
+                return true;
+            }
+        }
+        return detectedSsid.contains(TARGET_SSID_PREFIX) || 
+               detectedSsid.toLowerCase().contains("esp8266") ||
+               detectedSsid.toLowerCase().contains("beacon") ||
+               detectedSsid.toLowerCase().contains("mca_room");
     }
 
     @SuppressLint("MissingPermission")
@@ -86,7 +105,7 @@ public class WifiScanner {
         
         for (ScanResult result : results) {
             Log.d(TAG, "Detected SSID: " + result.SSID + " (RSSI: " + result.level + ")");
-            if (result.SSID != null && result.SSID.contains(TARGET_SSID_PREFIX)) {
+            if (isMatchingBeacon(result.SSID)) {
                 callback.onBeaconFound(result.SSID, result.level);
                 return;
             }
@@ -97,13 +116,18 @@ public class WifiScanner {
     @SuppressLint("MissingPermission")
     private void scanFailure(ScanCallback callback) {
         Log.e(TAG, "Scan failed (e.g. throttled). Checking old results.");
-        // We can still try to get old scan results
-        List<ScanResult> results = wifiManager.getScanResults();
-        for (ScanResult result : results) {
-            if (result.SSID != null && result.SSID.contains(TARGET_SSID_PREFIX)) {
-                callback.onBeaconFound(result.SSID, result.level);
-                return;
+        try {
+            List<ScanResult> results = wifiManager != null ? wifiManager.getScanResults() : null;
+            if (results != null) {
+                for (ScanResult result : results) {
+                    if (isMatchingBeacon(result.SSID)) {
+                        callback.onBeaconFound(result.SSID, result.level);
+                        return;
+                    }
+                }
             }
+        } catch (Exception e) {
+            Log.e(TAG, "Error fetching scan results: " + e.getMessage());
         }
         callback.onScanFailed();
     }

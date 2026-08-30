@@ -197,6 +197,14 @@ public class ApiClient {
         executeRequest(request, callback);
     }
 
+    public void getClassrooms(ApiCallback callback) {
+        Request request = new Request.Builder()
+                .url(BASE_URL + "/api/teacher/classrooms")
+                .get()
+                .build();
+        executeRequest(request, callback);
+    }
+
     public void getSubjectHistory(int subjectId, ApiCallback callback) {
         Request request = new Request.Builder()
                 .url(BASE_URL + "/api/teacher/subject-history/" + subjectId)

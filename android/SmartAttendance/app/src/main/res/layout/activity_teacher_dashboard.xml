@@ -114,20 +114,21 @@
                     android:textAppearance="?attr/textAppearanceTitleMedium"
                     android:textStyle="bold" />
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
+                <TextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Classroom ID (e.g. 1)"
-                    app:boxBackgroundColor="@android:color/transparent">
+                    android:text="Select Classroom / Class Name:"
+                    android:textAppearance="?attr/textAppearanceBodyMedium"
+                    android:textStyle="bold" />
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etClassroomId"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="number"
-                        android:text="1" />
-                </com.google.android.material.textfield.TextInputLayout>
+                <Spinner
+                    android:id="@+id/spinnerClassroom"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="4dp"
+                    android:background="@drawable/glass_card"
+                    android:paddingHorizontal="12dp" />
 
                 <TextView
                     android:layout_width="wrap_content"

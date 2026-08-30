@@ -82,35 +82,57 @@ public class AttendanceFcmService extends FirebaseMessagingService {
             return;
         }
 
-        int studentId = prefsHelper.getUserId();
+        final int studentId = prefsHelper.getUserId();
         
-        showNotification("Automatic Attendance", "Verifying presence and marking attendance for " + subjectName + "...", false);
+        Log.d(TAG, "Starting Wi-Fi beacon scan before marking automatic attendance for " + subjectName);
 
-        ApiClient.getInstance(getApplicationContext()).markAttendance(sessionId, studentId, new ApiClient.ApiCallback() {
+        // Perform Wi-Fi beacon scan first to verify student is inside classroom near beacon
+        WifiScanner wifiScanner = new WifiScanner(getApplicationContext());
+        wifiScanner.startScan(new WifiScanner.ScanCallback() {
             @Override
-            public void onSuccess(JSONObject response) {
-                boolean success = response.optBoolean("success", true);
-                boolean alreadyMarked = response.optBoolean("already_marked", false);
-                String msg = response.optString("message", "Attendance recorded!");
+            public void onBeaconFound(String ssid, int rssi) {
+                Log.d(TAG, "Classroom Wi-Fi beacon detected (" + ssid + "). Marking attendance...");
+                showNotification("Automatic Attendance", "Classroom Beacon verified (" + ssid + "). Marking attendance for " + subjectName + "...", false);
 
-                if (success) {
-                    String title = alreadyMarked ? "Attendance Verified" : "Attendance Marked ✓";
-                    String body = alreadyMarked ? "Already marked present for " + subjectName : "Successfully marked present for " + subjectName;
-                    showNotification(title, body, true);
-                    
-                    // Broadcast event to refresh active StudentDashboard UI
-                    sendUiUpdateBroadcast("SUCCESS", msg);
-                } else {
-                    showNotification("Attendance Verification Failed", msg, false);
-                    sendUiUpdateBroadcast("FAILED", msg);
-                }
+                ApiClient.getInstance(getApplicationContext()).markAttendance(sessionId, studentId, new ApiClient.ApiCallback() {
+                    @Override
+                    public void onSuccess(JSONObject response) {
+                        boolean success = response.optBoolean("success", true);
+                        boolean alreadyMarked = response.optBoolean("already_marked", false);
+                        String msg = response.optString("message", "Attendance recorded!");
+
+                        if (success) {
+                            String title = alreadyMarked ? "Attendance Verified" : "Attendance Marked ✓";
+                            String body = alreadyMarked ? "Already marked present for " + subjectName : "Successfully marked present for " + subjectName;
+                            showNotification(title, body, true);
+                            sendUiUpdateBroadcast("SUCCESS", msg);
+                        } else {
+                            showNotification("Attendance Verification Failed", msg, false);
+                            sendUiUpdateBroadcast("FAILED", msg);
+                        }
+                    }
+
+                    @Override
+                    public void onError(String errorMessage) {
+                        Log.e(TAG, "Failed to automatically mark attendance: " + errorMessage);
+                        showNotification("Attendance Failed", "Error marking attendance: " + errorMessage, false);
+                        sendUiUpdateBroadcast("ERROR", errorMessage);
+                    }
+                });
             }
 
             @Override
-            public void onError(String errorMessage) {
-                Log.e(TAG, "Failed to automatically mark attendance: " + errorMessage);
-                showNotification("Attendance Failed", "Error marking attendance: " + errorMessage, false);
-                sendUiUpdateBroadcast("ERROR", errorMessage);
+            public void onScanFailed() {
+                Log.w(TAG, "Wi-Fi beacon scan failed or Wi-Fi turned off. Skipping attendance.");
+                showNotification("Attendance Skipped", "Wi-Fi beacon scan failed. Ensure Wi-Fi & Location are ON.", false);
+                sendUiUpdateBroadcast("FAILED", "Wi-Fi beacon scan failed");
+            }
+
+            @Override
+            public void onScanFinished() {
+                Log.w(TAG, "No classroom Wi-Fi beacon found. Skipping attendance.");
+                showNotification("Attendance Skipped", "Classroom Wi-Fi Beacon not detected near you for " + subjectName, false);
+                sendUiUpdateBroadcast("FAILED", "Classroom beacon not detected");
             }
         });
     }

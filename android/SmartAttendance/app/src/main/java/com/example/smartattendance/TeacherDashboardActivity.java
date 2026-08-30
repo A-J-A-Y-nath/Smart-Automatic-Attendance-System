@@ -32,8 +32,7 @@ import java.util.Locale;
 public class TeacherDashboardActivity extends AppCompatActivity {
 
     private TextView tvTeacherInfo, tvTimerStatus;
-    private TextInputEditText etClassroomId;
-    private Spinner spinnerSubject;
+    private Spinner spinnerClassroom, spinnerSubject;
     private MaterialButton btnStartSession, btnStopSession;
     private Button btnLogout, btnRefresh;
     private ProgressBar progressBar;
@@ -41,6 +40,23 @@ public class TeacherDashboardActivity extends AppCompatActivity {
 
     private int currentTeacherId = -1;
     private CountDownTimer sessionTimer;
+
+    private static class ClassroomItem {
+        int id;
+        String roomName;
+        String ssid;
+
+        ClassroomItem(int id, String roomName, String ssid) {
+            this.id = id;
+            this.roomName = roomName;
+            this.ssid = ssid;
+        }
+
+        @Override
+        public String toString() {
+            return roomName + (ssid != null && !ssid.isEmpty() ? " (SSID: " + ssid + ")" : "");
+        }
+    }
 
     private static class SubjectItem {
         int id;
@@ -59,6 +75,7 @@ public class TeacherDashboardActivity extends AppCompatActivity {
         }
     }
 
+    private final List<ClassroomItem> classroomList = new ArrayList<>();
     private final List<SubjectItem> subjectList = new ArrayList<>();
 
     @Override
@@ -77,7 +94,7 @@ public class TeacherDashboardActivity extends AppCompatActivity {
 
         tvTeacherInfo = findViewById(R.id.tvTeacherInfo);
         tvTimerStatus = findViewById(R.id.tvTimerStatus);
-        etClassroomId = findViewById(R.id.etClassroomId);
+        spinnerClassroom = findViewById(R.id.spinnerClassroom);
         spinnerSubject = findViewById(R.id.spinnerSubject);
         btnStartSession = findViewById(R.id.btnStartSession);
         btnStopSession = findViewById(R.id.btnStopSession);
@@ -94,6 +111,7 @@ public class TeacherDashboardActivity extends AppCompatActivity {
 
         btnRefresh.setOnClickListener(v -> {
             fetchProfile();
+            loadClassrooms();
             checkActiveSession();
             fetchActiveRoster();
             if (spinnerSubject.getSelectedItem() != null) {
@@ -164,6 +182,7 @@ public class TeacherDashboardActivity extends AppCompatActivity {
                         tvTeacherInfo.setText("Name: " + name + "\nEmail: " + email + "\nFaculty ID: " + currentTeacherId);
                         
                         // loadTeacherSubjects will call checkActiveSession once done
+                        loadClassrooms();
                         loadTeacherSubjects();
                     } else {
                         tvTeacherInfo.setText("Error loading profile");
@@ -180,6 +199,55 @@ public class TeacherDashboardActivity extends AppCompatActivity {
                 prefsHelper.clearData();
                 startActivity(new Intent(TeacherDashboardActivity.this, MainActivity.class));
                 finish();
+            }
+        });
+    }
+
+    private void loadClassrooms() {
+        ApiClient.getInstance(this).getClassrooms(new ApiClient.ApiCallback() {
+            @Override
+            public void onSuccess(JSONObject response) {
+                try {
+                    JSONArray arr = response.optJSONArray("classrooms");
+                    classroomList.clear();
+                    if (arr != null) {
+                        for (int i = 0; i < arr.length(); i++) {
+                            JSONObject obj = arr.getJSONObject(i);
+                            classroomList.add(new ClassroomItem(
+                                obj.getInt("id"),
+                                obj.optString("room_name", "Classroom " + obj.getInt("id")),
+                                obj.optString("ssid", "")
+                            ));
+                        }
+                    }
+
+                    if (classroomList.isEmpty()) {
+                        classroomList.add(new ClassroomItem(1, "MCA Lab 101", "esp8266-mca101"));
+                    }
+
+                    ArrayAdapter<ClassroomItem> adapter = new ArrayAdapter<>(
+                        TeacherDashboardActivity.this,
+                        android.R.layout.simple_spinner_dropdown_item,
+                        classroomList
+                    );
+                    spinnerClassroom.setAdapter(adapter);
+
+                } catch (JSONException e) {
+                    Toast.makeText(TeacherDashboardActivity.this, "Error parsing classrooms", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                if (classroomList.isEmpty()) {
+                    classroomList.add(new ClassroomItem(1, "MCA Lab 101", "esp8266-mca101"));
+                    ArrayAdapter<ClassroomItem> adapter = new ArrayAdapter<>(
+                        TeacherDashboardActivity.this,
+                        android.R.layout.simple_spinner_dropdown_item,
+                        classroomList
+                    );
+                    spinnerClassroom.setAdapter(adapter);
+                }
             }
         });
     }
@@ -348,13 +416,13 @@ public class TeacherDashboardActivity extends AppCompatActivity {
             return;
         }
 
-        String classStr = etClassroomId.getText().toString().trim();
-        if (classStr.isEmpty()) {
-            Toast.makeText(this, "Please enter Classroom ID", Toast.LENGTH_SHORT).show();
+        if (classroomList.isEmpty() || spinnerClassroom.getSelectedItem() == null) {
+            Toast.makeText(this, "No classroom selected.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        int classroomId = Integer.parseInt(classStr);
+        ClassroomItem selectedClassroom = (ClassroomItem) spinnerClassroom.getSelectedItem();
+        int classroomId = selectedClassroom.id;
         SubjectItem selectedSubject = (SubjectItem) spinnerSubject.getSelectedItem();
         int subjectId = selectedSubject.id;
 

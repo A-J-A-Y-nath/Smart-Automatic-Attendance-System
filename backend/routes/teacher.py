@@ -45,6 +45,26 @@ def teacher_health():
         "message": "Teacher API module is online."
     }), 200
 
+@teacher_bp.route("/classrooms", methods=["GET"])
+@token_required
+@role_required(["Teacher", "Admin"])
+def get_teacher_classrooms():
+    """
+    GET /api/teacher/classrooms
+    Returns all configured classrooms / class groups (id, room_name, ssid, location).
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id, room_name, ssid, location FROM classrooms ORDER BY room_name ASC")
+        classrooms = cursor.fetchall()
+        return jsonify({"status": "success", "classrooms": classrooms}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
 @teacher_bp.route("/my-subjects", methods=["GET"])
 @token_required
 @role_required(["Teacher"])
