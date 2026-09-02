@@ -61,6 +61,7 @@ def get_student_history():
         conn.close()
 
 @student_bp.route("/active-session", methods=["GET"])
+@token_required
 def get_active_session():
     """
     GET /api/student/active-session

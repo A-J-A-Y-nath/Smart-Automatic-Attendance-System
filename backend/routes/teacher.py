@@ -411,7 +411,7 @@ def get_subject_history(subject_id):
             sess["session_date"] = str(sess.get("session_date")) if sess.get("session_date") else ""
             
             cursor.execute("""
-                SELECT u.name as student_name, u.register_no, ar.attendance_time
+                SELECT u.name as student_name, u.register_no, ar.attendance_time, ar.status
                 FROM attendance_records ar
                 JOIN users u ON ar.student_id = u.id
                 WHERE ar.session_id = %s AND u.role = 'Student'
