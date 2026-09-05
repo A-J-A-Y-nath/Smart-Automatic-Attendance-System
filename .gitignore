@@ -99,6 +99,7 @@ Desktop.ini
 *.log
 logs/
 *.tmp
+*.zip
 
 # ------------------------------------------
 # Antigravity & Agent Artifacts
@@ -107,3 +108,6 @@ brain/
 scratch/
 .gemini/
 .agents/
+
+EXPOSED_CREDENTIALS.md
+Backend/.env.example

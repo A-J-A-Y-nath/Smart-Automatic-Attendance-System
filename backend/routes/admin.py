@@ -310,13 +310,47 @@ def update_subject(subject_id):
 @token_required
 @role_required(["Admin"])
 def list_classrooms():
-    """GET /api/admin/classrooms"""
+    """GET /api/admin/classrooms?include_inactive=true"""
+    include_inactive = request.args.get("include_inactive", "false").lower() == "true"
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT id, room_name, ssid, location FROM classrooms ORDER BY room_name")
+        if include_inactive:
+            cursor.execute("""
+                SELECT id, room_name, ssid, bssid, location, is_active, rssi_threshold
+                FROM classrooms ORDER BY room_name
+            """)
+        else:
+            cursor.execute("""
+                SELECT id, room_name, ssid, bssid, location, is_active, rssi_threshold
+                FROM classrooms WHERE is_active = TRUE ORDER BY room_name
+            """)
         rooms = cursor.fetchall()
         return jsonify({"status": "success", "classrooms": rooms}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@admin_bp.route("/classrooms/<int:classroom_id>/students", methods=["GET"])
+@token_required
+@role_required(["Admin"])
+def list_classroom_roster(classroom_id):
+    """GET /api/admin/classrooms/<classroom_id>/students — students associated with this classroom."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT u.id, u.name, u.register_no, u.email
+            FROM classroom_students cst
+            JOIN users u ON u.id = cst.student_id
+            WHERE cst.classroom_id = %s
+            ORDER BY u.name
+        """, (classroom_id,))
+        students = cursor.fetchall()
+        return jsonify({"status": "success", "classroom_id": classroom_id, "students": students}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
@@ -328,21 +362,29 @@ def list_classrooms():
 @token_required
 @role_required(["Admin"])
 def create_classroom():
-    """POST /api/admin/classrooms  Body: { room_name, ssid, location }"""
+    """POST /api/admin/classrooms  Body: { room_name, ssid, bssid, location, rssi_threshold }"""
     data = request.get_json() or {}
     room_name = data.get("room_name", "").strip()
     ssid = data.get("ssid", "").strip()
+    bssid = (data.get("bssid") or "").strip() or None
     location = data.get("location", "").strip()
+    rssi_threshold = data.get("rssi_threshold", -85)
 
     if not all([room_name, ssid]):
         return jsonify({"status": "error", "message": "room_name and ssid are required."}), 400
+
+    try:
+        rssi_threshold = int(rssi_threshold)
+    except (TypeError, ValueError):
+        rssi_threshold = -85
 
     conn = get_connection()
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "INSERT INTO classrooms (room_name, ssid, location) VALUES (%s,%s,%s) RETURNING id",
-            (room_name, ssid, location)
+            """INSERT INTO classrooms (room_name, ssid, bssid, location, rssi_threshold)
+               VALUES (%s,%s,%s,%s,%s) RETURNING id""",
+            (room_name, ssid, bssid, location, rssi_threshold)
         )
         new_id = cursor.fetchone()['id']
         conn.commit()
@@ -382,21 +424,33 @@ def delete_classroom(classroom_id):
 @token_required
 @role_required(["Admin"])
 def update_classroom(classroom_id):
-    """PUT /api/admin/classrooms/<classroom_id>  Body: { room_name, ssid, location }"""
+    """PUT /api/admin/classrooms/<classroom_id>  Body: { room_name, ssid, bssid, location, is_active, rssi_threshold }"""
     data = request.get_json() or {}
     room_name = data.get("room_name", "").strip()
     ssid = data.get("ssid", "").strip()
+    bssid = (data.get("bssid") or "").strip() or None
     location = data.get("location", "").strip()
+    is_active = data.get("is_active", True)
+    if isinstance(is_active, str):
+        is_active = is_active.strip().lower() in ("1", "true", "yes")
+    rssi_threshold = data.get("rssi_threshold", -85)
 
     if not all([room_name, ssid]):
         return jsonify({"status": "error", "message": "room_name and ssid are required."}), 400
+
+    try:
+        rssi_threshold = int(rssi_threshold)
+    except (TypeError, ValueError):
+        rssi_threshold = -85
 
     conn = get_connection()
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "UPDATE classrooms SET room_name=%s, ssid=%s, location=%s WHERE id=%s",
-            (room_name, ssid, location, classroom_id)
+            """UPDATE classrooms
+               SET room_name=%s, ssid=%s, bssid=%s, location=%s, is_active=%s, rssi_threshold=%s
+               WHERE id=%s""",
+            (room_name, ssid, bssid, location, is_active, rssi_threshold, classroom_id)
         )
         if cursor.rowcount == 0:
             cursor.execute("SELECT id FROM classrooms WHERE id=%s", (classroom_id,))
@@ -408,6 +462,34 @@ def update_classroom(classroom_id):
         conn.rollback()
         if any(err in str(e).lower() for err in ["duplicate entry", "duplicate key", "unique constraint"]):
             return jsonify({"status": "error", "message": f"SSID '{ssid}' already used."}), 409
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@admin_bp.route("/classrooms/<int:classroom_id>/toggle-active", methods=["POST"])
+@token_required
+@role_required(["Admin"])
+def toggle_classroom_active(classroom_id):
+    """POST /api/admin/classrooms/<classroom_id>/toggle-active — flips is_active without touching other fields."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT is_active FROM classrooms WHERE id=%s", (classroom_id,))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"status": "error", "message": "Classroom not found."}), 404
+        new_state = not row["is_active"]
+        cursor.execute("UPDATE classrooms SET is_active=%s WHERE id=%s", (new_state, classroom_id))
+        conn.commit()
+        return jsonify({
+            "status": "success",
+            "message": f"Classroom {'activated' if new_state else 'deactivated'}.",
+            "is_active": new_state
+        }), 200
+    except Exception as e:
+        conn.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         cursor.close()

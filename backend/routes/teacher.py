@@ -56,7 +56,10 @@ def get_teacher_classrooms():
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT id, room_name, ssid, location FROM classrooms ORDER BY room_name ASC")
+        cursor.execute("""
+            SELECT id, room_name, ssid, bssid, location, rssi_threshold
+            FROM classrooms WHERE is_active = TRUE ORDER BY room_name ASC
+        """)
         classrooms = cursor.fetchall()
         return jsonify({"status": "success", "classrooms": classrooms}), 200
     except Exception as e:

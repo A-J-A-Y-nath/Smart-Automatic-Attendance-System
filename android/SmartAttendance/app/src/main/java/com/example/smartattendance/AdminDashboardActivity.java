@@ -341,8 +341,12 @@ public class AdminDashboardActivity extends AppCompatActivity {
                         rawClassroomsList.add(c);
                         classroomIds.add(c.optInt("id"));
                         classroomLabels.add(c.optString("room_name") + " (SSID: " + c.optString("ssid") + ")");
-                        sb.append("🏫 ").append(c.optString("room_name"))
+                        boolean active = c.optBoolean("is_active", true);
+                        String bssid = c.optString("bssid", "");
+                        sb.append(active ? "🏫 " : "🚫 ").append(c.optString("room_name"))
+                          .append(active ? "" : " [INACTIVE]")
                           .append("\n   SSID: ").append(c.optString("ssid"))
+                          .append(bssid.isEmpty() ? "" : "  •  BSSID: " + bssid)
                           .append("  •  ").append(c.optString("location", "")).append("\n\n");
                     }
                     tvClassroomsList.setText(sb.toString().trim());
@@ -914,13 +918,26 @@ public class AdminDashboardActivity extends AppCompatActivity {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(50, 20, 50, 20);
 
+        String bssidVal = classroom.optString("bssid", "");
+        boolean isActiveVal = classroom.optBoolean("is_active", true);
+        int rssiVal = classroom.optInt("rssi_threshold", -85);
+
         EditText etRoomName = new EditText(this); etRoomName.setHint("Room Name"); etRoomName.setText(name);
         EditText etSsid = new EditText(this); etSsid.setHint("SSID"); etSsid.setText(ssid);
+        EditText etBssid = new EditText(this); etBssid.setHint("BSSID / MAC address (optional)"); etBssid.setText(bssidVal);
         EditText etLocation = new EditText(this); etLocation.setHint("Location"); etLocation.setText(location);
+        EditText etRssi = new EditText(this); etRssi.setHint("RSSI threshold dBm"); etRssi.setText(String.valueOf(rssiVal));
+        etRssi.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_SIGNED);
+        android.widget.Switch swActive = new android.widget.Switch(this);
+        swActive.setText("Active (visible to teachers/students)");
+        swActive.setChecked(isActiveVal);
 
         layout.addView(etRoomName);
         layout.addView(etSsid);
+        layout.addView(etBssid);
         layout.addView(etLocation);
+        layout.addView(etRssi);
+        layout.addView(swActive);
 
         new AlertDialog.Builder(this)
             .setTitle(null)
@@ -928,7 +945,10 @@ public class AdminDashboardActivity extends AppCompatActivity {
             .setPositiveButton("Save Changes", (dialog, which) -> {
                 String newName = etRoomName.getText().toString().trim();
                 String newSsid = etSsid.getText().toString().trim();
+                String newBssid = etBssid.getText().toString().trim();
                 String newLoc = etLocation.getText().toString().trim();
+                String newRssiStr = etRssi.getText().toString().trim();
+                boolean newActive = swActive.isChecked();
 
                 if (newName.isEmpty() || newSsid.isEmpty()) {
                     Toast.makeText(this, "Room name and SSID are required.", Toast.LENGTH_SHORT).show();
@@ -939,7 +959,12 @@ public class AdminDashboardActivity extends AppCompatActivity {
                     JSONObject body = new JSONObject();
                     body.put("room_name", newName);
                     body.put("ssid", newSsid);
+                    body.put("bssid", newBssid);
                     body.put("location", newLoc);
+                    body.put("is_active", newActive);
+                    if (!newRssiStr.isEmpty()) {
+                        try { body.put("rssi_threshold", Integer.parseInt(newRssiStr)); } catch (NumberFormatException ignored) {}
+                    }
 
                     progressBar.setVisibility(View.VISIBLE);
                     ApiClient.getInstance(this).adminPut("/api/admin/classrooms/" + roomId, body, new ApiClient.ApiCallback() {
@@ -1120,12 +1145,17 @@ public class AdminDashboardActivity extends AppCompatActivity {
         layout.setPadding(50, 20, 50, 20);
 
         EditText etRoomName = new EditText(this); etRoomName.setHint("Room Name (e.g. MCA Lab 101)");
-        EditText etSsid = new EditText(this); etSsid.setHint("ESP8266 SSID (e.g. MCA_ROOM_101)");
+        EditText etSsid = new EditText(this); etSsid.setHint("ESP8266/Router SSID (e.g. MCA_ROOM_101)");
+        EditText etBssid = new EditText(this); etBssid.setHint("BSSID / MAC address (optional, e.g. AA:BB:CC:DD:EE:FF)");
         EditText etLocation = new EditText(this); etLocation.setHint("Location (e.g. Block A)");
+        EditText etRssi = new EditText(this); etRssi.setHint("RSSI threshold dBm (optional, default -85)");
+        etRssi.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_SIGNED);
 
         layout.addView(etRoomName);
         layout.addView(etSsid);
+        layout.addView(etBssid);
         layout.addView(etLocation);
+        layout.addView(etRssi);
 
         new AlertDialog.Builder(this)
             .setTitle(null)
@@ -1133,7 +1163,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
             .setPositiveButton("Create", (dialog, which) -> {
                 String roomName = etRoomName.getText().toString().trim();
                 String ssid = etSsid.getText().toString().trim();
+                String bssid = etBssid.getText().toString().trim();
                 String location = etLocation.getText().toString().trim();
+                String rssiStr = etRssi.getText().toString().trim();
 
                 if (roomName.isEmpty() || ssid.isEmpty()) {
                     Toast.makeText(this, "Room name and SSID are required.", Toast.LENGTH_SHORT).show();
@@ -1143,7 +1175,11 @@ public class AdminDashboardActivity extends AppCompatActivity {
                     JSONObject body = new JSONObject();
                     body.put("room_name", roomName);
                     body.put("ssid", ssid);
+                    body.put("bssid", bssid);
                     body.put("location", location);
+                    if (!rssiStr.isEmpty()) {
+                        try { body.put("rssi_threshold", Integer.parseInt(rssiStr)); } catch (NumberFormatException ignored) {}
+                    }
 
                     progressBar.setVisibility(View.VISIBLE);
                     ApiClient.getInstance(this).adminPost("/api/admin/classrooms", body, new ApiClient.ApiCallback() {
