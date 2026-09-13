@@ -311,7 +311,7 @@ def update_subject(subject_id):
 @role_required(["Admin"])
 def list_classrooms():
     """GET /api/admin/classrooms?include_inactive=true"""
-    include_inactive = request.args.get("include_inactive", "false").lower() == "true"
+    include_inactive = request.args.get("include_inactive", "true").lower() in ("true", "1", "yes")
     conn = get_connection()
     cursor = conn.cursor()
     try:
@@ -351,6 +351,87 @@ def list_classroom_roster(classroom_id):
         """, (classroom_id,))
         students = cursor.fetchall()
         return jsonify({"status": "success", "classroom_id": classroom_id, "students": students}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@admin_bp.route("/classrooms/<int:classroom_id>/students", methods=["PUT"])
+@token_required
+@role_required(["Admin"])
+def replace_classroom_roster(classroom_id):
+    """
+    PUT /api/admin/classrooms/<classroom_id>/students
+    Body: { "student_ids": [1, 2, 3] }
+    Fully replaces this classroom's student roster with the given list
+    (an empty list clears the roster). Only rows for role='Student' are
+    accepted; anything else is silently ignored.
+    """
+    data = request.get_json() or {}
+    student_ids = data.get("student_ids", [])
+    if not isinstance(student_ids, list):
+        return jsonify({"status": "error", "message": "student_ids must be a list."}), 400
+
+    try:
+        student_ids = [int(sid) for sid in student_ids]
+    except (TypeError, ValueError):
+        return jsonify({"status": "error", "message": "student_ids must contain integers."}), 400
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id FROM classrooms WHERE id = %s", (classroom_id,))
+        if not cursor.fetchone():
+            return jsonify({"status": "error", "message": "Classroom not found."}), 404
+
+        cursor.execute("DELETE FROM classroom_students WHERE classroom_id = %s", (classroom_id,))
+
+        if student_ids:
+            cursor.execute(
+                "SELECT id FROM users WHERE role = 'Student' AND id = ANY(%s)",
+                (student_ids,)
+            )
+            valid_ids = [r["id"] for r in cursor.fetchall()]
+            for sid in valid_ids:
+                cursor.execute(
+                    "INSERT INTO classroom_students (classroom_id, student_id) VALUES (%s, %s) "
+                    "ON CONFLICT (classroom_id, student_id) DO NOTHING",
+                    (classroom_id, sid)
+                )
+        conn.commit()
+        return jsonify({
+            "status": "success",
+            "message": "Classroom roster updated.",
+            "classroom_id": classroom_id,
+            "student_count": len(student_ids)
+        }), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@admin_bp.route("/students/<int:student_id>/classrooms", methods=["GET"])
+@token_required
+@role_required(["Admin"])
+def list_student_classrooms(student_id):
+    """GET /api/admin/students/<student_id>/classrooms — which classrooms a student belongs to."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT c.id, c.room_name, c.ssid, c.location
+            FROM classroom_students cst
+            JOIN classrooms c ON c.id = cst.classroom_id
+            WHERE cst.student_id = %s
+            ORDER BY c.room_name
+        """, (student_id,))
+        classrooms = cursor.fetchall()
+        return jsonify({"status": "success", "student_id": student_id, "classrooms": classrooms}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:

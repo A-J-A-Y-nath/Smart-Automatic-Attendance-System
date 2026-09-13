@@ -157,6 +157,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         if (cardSubjects != null) cardSubjects.setOnLongClickListener(subjectLongClick);
         if (tvSubjectsList != null) tvSubjectsList.setOnLongClickListener(subjectLongClick);
 
+
         View.OnLongClickListener classroomLongClick = v -> {
             showMultiSelectDeleteClassroomsDialog();
             return true;
@@ -323,7 +324,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
     }
 
     private void loadClassrooms() {
-        ApiClient.getInstance(this).adminGet("/api/admin/classrooms", new ApiClient.ApiCallback() {
+        ApiClient.getInstance(this).adminGet("/api/admin/classrooms?include_inactive=true", new ApiClient.ApiCallback() {
             @Override
             public void onSuccess(JSONObject response) {
                 try {
@@ -339,9 +340,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
                     for (int i = 0; i < arr.length(); i++) {
                         JSONObject c = arr.getJSONObject(i);
                         rawClassroomsList.add(c);
-                        classroomIds.add(c.optInt("id"));
-                        classroomLabels.add(c.optString("room_name") + " (SSID: " + c.optString("ssid") + ")");
                         boolean active = c.optBoolean("is_active", true);
+                        classroomIds.add(c.optInt("id"));
+                        classroomLabels.add(c.optString("room_name") + (active ? "" : " [INACTIVE]") + " (SSID: " + c.optString("ssid") + ")");
                         String bssid = c.optString("bssid", "");
                         sb.append(active ? "🏫 " : "🚫 ").append(c.optString("room_name"))
                           .append(active ? "" : " [INACTIVE]")
@@ -827,13 +828,100 @@ public class AdminDashboardActivity extends AppCompatActivity {
         String[] titles = new String[rawClassroomsList.size()];
         for (int i = 0; i < rawClassroomsList.size(); i++) {
             JSONObject c = rawClassroomsList.get(i);
-            titles[i] = c.optString("room_name") + " (SSID: " + c.optString("ssid") + ")";
+            boolean active = c.optBoolean("is_active", true);
+            titles[i] = (active ? "" : "[INACTIVE] ") + c.optString("room_name") + " (SSID: " + c.optString("ssid") + ")";
         }
         new AlertDialog.Builder(this)
             .setTitle(null)
-            .setItems(titles, (dialog, which) -> showEditClassroomDialog(rawClassroomsList.get(which)))
+            .setItems(titles, (dialog, which) -> {
+                JSONObject selected = rawClassroomsList.get(which);
+                new AlertDialog.Builder(this)
+                    .setTitle(selected.optString("room_name"))
+                    .setItems(new String[]{"Edit Details", "Manage Students"}, (d2, action) -> {
+                        if (action == 0) showEditClassroomDialog(selected);
+                        else showManageClassroomStudentsDialog(selected);
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
+            })
             .setNegativeButton("Cancel", null)
             .show();
+    }
+    /**
+     * NEW FILE-equivalent addition: lets Admin pick which students belong
+     * to a classroom. Loads the full Student list plus the classroom's
+     * current roster, shows a multi-select checklist pre-checked with
+     * current members, and PUTs the full new set on save.
+     */
+    private void showManageClassroomStudentsDialog(JSONObject classroom) {
+        final int classroomId = classroom.optInt("id");
+
+        if (rawStudentsList.isEmpty()) {
+            Toast.makeText(this, "No students loaded yet. Pull to refresh and try again.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        progressBar.setVisibility(View.VISIBLE);
+        ApiClient.getInstance(this).adminGet("/api/admin/classrooms/" + classroomId + "/students", new ApiClient.ApiCallback() {
+            @Override
+            public void onSuccess(JSONObject response) {
+                progressBar.setVisibility(View.GONE);
+                java.util.Set<Integer> currentMemberIds = new java.util.HashSet<>();
+                JSONArray current = response.optJSONArray("students");
+                if (current != null) {
+                    for (int i = 0; i < current.length(); i++) {
+                        currentMemberIds.add(current.optJSONObject(i).optInt("id"));
+                    }
+                }
+
+                String[] names = new String[rawStudentsList.size()];
+                boolean[] checked = new boolean[rawStudentsList.size()];
+                for (int i = 0; i < rawStudentsList.size(); i++) {
+                    JSONObject stu = rawStudentsList.get(i);
+                    names[i] = stu.optString("name") + " (" + stu.optString("register_no", "N/A") + ")";
+                    checked[i] = currentMemberIds.contains(stu.optInt("id"));
+                }
+
+                new AlertDialog.Builder(AdminDashboardActivity.this)
+                    .setTitle("Students in " + classroom.optString("room_name"))
+                    .setMultiChoiceItems(names, checked, (dialog, which, isChecked) -> checked[which] = isChecked)
+                    .setPositiveButton("Save", (dialog, which) -> {
+                        org.json.JSONArray idsArray = new org.json.JSONArray();
+                        for (int i = 0; i < rawStudentsList.size(); i++) {
+                            if (checked[i]) idsArray.put(rawStudentsList.get(i).optInt("id"));
+                        }
+                        try {
+                            JSONObject body = new JSONObject();
+                            body.put("student_ids", idsArray);
+                            progressBar.setVisibility(View.VISIBLE);
+                            ApiClient.getInstance(AdminDashboardActivity.this).adminPut(
+                                "/api/admin/classrooms/" + classroomId + "/students", body,
+                                new ApiClient.ApiCallback() {
+                                    @Override
+                                    public void onSuccess(JSONObject response) {
+                                        progressBar.setVisibility(View.GONE);
+                                        Toast.makeText(AdminDashboardActivity.this, "Classroom roster updated!", Toast.LENGTH_SHORT).show();
+                                    }
+                                    @Override
+                                    public void onError(String errorMessage) {
+                                        progressBar.setVisibility(View.GONE);
+                                        Toast.makeText(AdminDashboardActivity.this, "Error: " + errorMessage, Toast.LENGTH_LONG).show();
+                                    }
+                                });
+                        } catch (JSONException e) {
+                            Toast.makeText(AdminDashboardActivity.this, "Error building request.", Toast.LENGTH_SHORT).show();
+                        }
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(AdminDashboardActivity.this, "Could not load roster: " + errorMessage, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     private void showMultiSelectDeleteClassroomsDialog() {
@@ -846,7 +934,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
         for (int i = 0; i < rawClassroomsList.size(); i++) {
             JSONObject c = rawClassroomsList.get(i);
-            titles[i] = c.optString("room_name") + " (SSID: " + c.optString("ssid") + ")";
+            boolean active = c.optBoolean("is_active", true);
+            titles[i] = (active ? "" : "[INACTIVE] ") + c.optString("room_name") + " (SSID: " + c.optString("ssid") + ")";
         }
 
         new AlertDialog.Builder(this)
