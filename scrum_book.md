@@ -16,6 +16,8 @@
 - [Day 7: Student Attendance Statistics & Live Teacher Roster Engine](#-day-7-student-attendance-statistics--live-teacher-roster-engine)
 - [Day 8: Cloud Database Migration to Neon PostgreSQL](#-day-8-cloud-database-migration-to-neon-postgresql)
 - [Day 9: Live Cloud Backend Deployment on Render](#-day-9-live-cloud-backend-deployment-on-render)
+- [Day 10: Classroom Hardware Identity & Active/Inactive Lifecycle Management](#-day-10-classroom-hardware-identity--activeinactive-lifecycle-management)
+- [Day 11: Classroom Student Roster Management & Admin Lifecycle Synchronization](#-day-11-classroom-student-roster-management--admin-lifecycle-synchronization)
 - [Upcoming Sprints & Next Tasks](#-upcoming-sprints--next-tasks)
 - [Summary of Overall Progress & Metrics](#-summary-of-overall-progress--metrics)
 
@@ -311,6 +313,73 @@
 
 ---
 
+## 📅 Day 10: Classroom Hardware Identity & Active/Inactive Lifecycle Management
+**Date:** Phase 10  
+**Sprint Milestone:** Hardware BSSID Verification, RSSI Thresholds & Active/Inactive Lifecycle  
+
+### 🎯 Objectives
+* Strengthen beacon verification by supporting hardware MAC addresses (BSSID) in addition to SSID.
+* Introduce proximity RSSI signal strength thresholds (-85 dBm default) to prevent false attendance marking from outside classrooms.
+* Implement classroom lifecycle states (`is_active = TRUE/FALSE`) allowing administrators to activate or deactivate classrooms without deleting historical records.
+* Enhance Android Admin Dashboard to configure BSSID, RSSI thresholds, and active/inactive switches.
+
+### 🛠️ Work Completed
+1. **Database Schema Enhancements (`database/migrations/001_classroom_and_attendance_foundation.sql`)**:
+   * Added `bssid` (VARCHAR), `is_active` (BOOLEAN DEFAULT TRUE), and `rssi_threshold` (INTEGER DEFAULT -85) to `classrooms` table.
+   * Added `beacon_type`, `override_ssid`, `override_bssid` to `attendance_sessions`.
+   * Added `method` (AUTOMATIC/MANUAL), `marked_by`, and `bssid` to `attendance_records`.
+2. **Backend API Endpoints (`backend/routes/admin.py`, `backend/routes/teacher.py`)**:
+   * Updated `POST /api/admin/classrooms` and `PUT /api/admin/classrooms/<id>` to accept BSSID, location, RSSI threshold, and `is_active`.
+   * Added `POST /api/admin/classrooms/<id>/toggle-active` to flip classroom status on demand.
+   * Filtered teacher classroom lists to only active classrooms (`WHERE is_active = TRUE`).
+3. **Android Admin Dashboard Updates (`AdminDashboardActivity.java`)**:
+   * Added BSSID and RSSI threshold input fields in Create and Edit classroom dialogs.
+   * Added "Active (visible to teachers/students)" switch in Edit Classroom dialog.
+   * Rendered active/inactive status badges (`🏫` vs `🚫 [INACTIVE]`) on classroom cards.
+
+### 🧪 Verification & Outcome
+* Verified classroom creation and modification with BSSID and RSSI values.
+* Verified that deactivated classrooms are hidden from teacher session-creation lists while remaining accessible to administrators.
+
+### 📁 Artifacts Produced
+* [`database/migrations/001_classroom_and_attendance_foundation.sql`](file:///e:/Smart-Automatic-Attendance-System/database/migrations/001_classroom_and_attendance_foundation.sql)
+* [`backend/routes/admin.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/admin.py)
+* [`backend/routes/teacher.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/teacher.py)
+* [`AdminDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/AdminDashboardActivity.java)
+
+---
+
+## 📅 Day 11: Classroom Student Roster Management & Admin Lifecycle Synchronization
+**Date:** Phase 11  
+**Sprint Milestone:** Direct Student-Classroom Mapping & Admin Visibility Synchronization  
+
+### 🎯 Objectives
+* Enable administrators to explicitly manage which students belong to each classroom.
+* Ensure administrators have full visibility over both active and inactive classrooms in the dashboard.
+* Prevent inactive classrooms from disappearing from admin controls.
+
+### 🛠️ Work Completed
+1. **Classroom-Student Roster Engine (`backend/routes/admin.py`)**:
+   * Created `GET /api/admin/classrooms/<id>/students`: Fetches all enrolled students for a specific classroom.
+   * Created `PUT /api/admin/classrooms/<id>/students`: Replaces the student roster with a specified list of student IDs.
+   * Created `GET /api/admin/students/<id>/classrooms`: Queries which classrooms a student belongs to.
+2. **Android Multi-Select Student Roster UI (`AdminDashboardActivity.java`)**:
+   * Enhanced "Manage Classrooms" dialog with an action chooser: "Edit Details" or "Manage Students".
+   * Implemented `showManageClassroomStudentsDialog`: Loads all students, pre-checks existing members in a checklist dialog, and updates membership on save.
+3. **Admin Classroom Visibility & Synchronization**:
+   * Fixed `/api/admin/classrooms` endpoint to default `include_inactive = true` so administrators can always see, edit, and reactivate inactive classrooms.
+   * Updated Android app to query `/api/admin/classrooms?include_inactive=true` and display `[INACTIVE]` tags across selection dialogs and dropdown menus.
+
+### 🧪 Verification & Outcome
+* Student roster management tested and verified via live PUT/GET requests.
+* Verified that inactive classrooms (e.g. `MCA 5G`) now remain visible to Administrators with `🚫 [INACTIVE]` badges and can be reactivated directly from the Android UI.
+
+### 📁 Artifacts Produced
+* [`backend/routes/admin.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/admin.py)
+* [`AdminDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/AdminDashboardActivity.java)
+
+---
+
 ## 🎯 Upcoming Sprints & Next Tasks
 
 ### 🔔 Sprint Task 1: Firebase Cloud Messaging (FCM) Integration
@@ -331,23 +400,24 @@
 
 ## 📊 Summary of Overall Progress & Metrics
 
-![Progress](https://geps.dev/progress/98?dangerColor=8b0000&warningColor=fe8019&successColor=22c55e)
+![Progress](https://geps.dev/progress/99?dangerColor=8b0000&warningColor=fe8019&successColor=22c55e)
 
 ```
-[█████████████████████████████████████████████████████████████] 98% Overall System Completion
+[█████████████████████████████████████████████████████████████] 99% Overall System Completion
 ```
 
 | Module | Status | Visual Progress | Highlights / Features |
 | :--- | :--- | :--- | :--- |
-| **Database** | ✅ 100% Complete | `██████████` | **Neon PostgreSQL** serverless cloud DB, 7 tables, FKs, `setval` sequences. |
+| **Database** | ✅ 100% Complete | `██████████` | **Neon PostgreSQL** serverless cloud DB, 8 tables, FKs, migration scripts. |
 | **ESP8266 Hardware** | ✅ 100% Complete | `██████████` | AP beacon broadcasting (`MCA_ROOM_101`), mDNS service responder. |
 | **Backend Security** | ✅ 100% Complete | `██████████` | Salted scrypt password hashing, JWT tokens, RBAC decorators. |
 | **Cloud Hosting** | ✅ 100% Complete | `██████████` | **Render Cloud Hosting** live production server over SSL/HTTPS. |
 | **Attendance APIs** | ✅ 100% Complete | `██████████` | `/start-session`, `/mark-attendance`, `/my-stats`, `/active-roster`. |
 | **FCM Notifications**| ✅ 100% Complete | `██████████` | High-priority data payload multicast, automatic background attendance marking. |
-| **Admin System** | ✅ 100% Complete | `██████████` | Full CRUD for Users, Subjects, Classrooms; Long-Press Delete; Refresh button. |
+| **Admin System** | ✅ 100% Complete | `██████████` | Full CRUD for Users, Subjects, Classrooms, Roster Mapping; Long-Press Delete. |
+| **Classroom Lifecycle** | ✅ 100% Complete | `██████████` | Active/Inactive toggling, BSSID verification, RSSI signal filtering (-85 dBm). |
 | **Web Console** | ✅ 100% Complete | `██████████` | E2E automation runner, node visualizer, JSON inspector, event logger. |
 | **Android App** | ✅ 100% Complete | `██████████` | Student, Teacher, Admin dashboards, Wi-Fi scanner, live roster, stats bars. |
 
 ---
-*Scrum Log last updated for Day 9 completion.*
+*Scrum Log last updated for Day 11 completion.*

@@ -21,6 +21,7 @@ An Android-based smart attendance system that automatically marks student attend
 | **Flask REST API & Auth** | ✅ Complete | `██████████` | `100%` |
 | **Android Mobile App & Scanning** | ✅ Complete | `██████████` | `100%` |
 | **Admin Dashboard & Full CRUD** | ✅ Complete | `██████████` | `100%` |
+| **Classroom Hardware Identity & Rosters** | ✅ Complete | `██████████` | `100%` |
 | **Student Stats & Live Roster** | ✅ Complete | `██████████` | `100%` |
 | **Production Cloud Backend Deployment (Render)** | ✅ Complete | `██████████` | `100%` |
 | **FCM Push Notifications** | ✅ Complete | `██████████` | `100%` |
@@ -89,7 +90,8 @@ Smart-Automatic-Attendance-System/
 │   └── .env              # DATABASE_URL (Neon PostgreSQL), JWT_SECRET
 │
 ├── database/
-│   └── schema.sql        # PostgreSQL DDL for all tables
+│   ├── schema.sql        # PostgreSQL DDL for all tables
+│   └── migrations/       # Idempotent migration scripts (001_classroom_and_attendance_foundation.sql)
 │
 ├── esp8266/
 │   └── classroom_beacon/classroom_beacon.ino  # Arduino AP firmware
@@ -133,6 +135,9 @@ Smart-Automatic-Attendance-System/
 - [x] Admin Dashboard — 7 glassmorphic cards (role-separated for Students, Teachers, Administrators, Subjects, Classrooms, Sessions, Attendance)
 - [x] Admin Dashboard CRUD — full Create, Read, Edit (PUT), and Delete (DELETE) dialog forms for Users, Subjects, and Classrooms
 - [x] Admin Dashboard Top-Bar Refresh Button — instant multi-stream data reload
+- [x] Classroom Hardware Identity & Signal Thresholds — BSSID MAC address verification and RSSI proximity filtering (-85 dBm default)
+- [x] Classroom Lifecycle Management — Active/Inactive toggle states; inactive classrooms hidden from teachers/students while remaining visible to admins
+- [x] Classroom Student Roster Management — Direct student-to-classroom mapping via `classroom_students` table and Android multi-select checklist
 
 ---
 

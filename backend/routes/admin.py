@@ -13,6 +13,7 @@ from flask import Blueprint, jsonify, request, g
 from middleware.auth import token_required, role_required
 from database.db import get_connection
 from utils.password import hash_password
+from utils.fcm_service import send_multicast_attendance_alert
 import datetime
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
@@ -311,7 +312,7 @@ def update_subject(subject_id):
 @role_required(["Admin"])
 def list_classrooms():
     """GET /api/admin/classrooms?include_inactive=true"""
-    include_inactive = request.args.get("include_inactive", "true").lower() in ("true", "1", "yes")
+    include_inactive = request.args.get("include_inactive", "false").lower() == "true"
     conn = get_connection()
     cursor = conn.cursor()
     try:
@@ -643,8 +644,49 @@ def admin_start_session():
             RETURNING id
         """, (subject_id, classroom_id, teacher_id, now.date(), now, end_time))
         session_id = cursor.fetchone()['id']
+
+        # Same classroom-scoped eligibility rule used by the Teacher flow:
+        # only students explicitly associated with this classroom.
+        cursor.execute(
+            """
+            INSERT INTO attendance_records (session_id, student_id, status, method)
+            SELECT %s, cst.student_id, 'ABSENT', 'AUTOMATIC'
+            FROM classroom_students cst
+            JOIN users u ON u.id = cst.student_id
+            WHERE cst.classroom_id = %s AND u.role = 'Student'
+            ON CONFLICT (session_id, student_id) DO NOTHING
+            """,
+            (session_id, classroom_id)
+        )
         conn.commit()
-        return jsonify({"status": "success", "message": "Session started.", "session_id": session_id, "remaining_seconds": 300}), 201
+
+        cursor.execute("SELECT subject_name FROM subjects WHERE id = %s", (subject_id,))
+        subj_row = cursor.fetchone()
+        subject_name = subj_row["subject_name"] if subj_row else "Unknown Subject"
+
+        cursor.execute(
+            """
+            SELECT u.fcm_token FROM users u
+            JOIN classroom_students cst ON cst.student_id = u.id
+            WHERE cst.classroom_id = %s AND u.role = 'Student' AND u.fcm_token IS NOT NULL
+            """,
+            (classroom_id,)
+        )
+        students = cursor.fetchall()
+        tokens = [row['fcm_token'] for row in students if row['fcm_token']]
+
+        dispatched = 0
+        if tokens:
+            dispatched, _ = send_multicast_attendance_alert(
+                session_id=session_id, classroom_id=classroom_id,
+                subject_name=subject_name, tokens=tokens
+            )
+
+        return jsonify({
+            "status": "success", "message": "Session started.",
+            "session_id": session_id, "remaining_seconds": 300,
+            "dispatched_count": dispatched
+        }), 201
     except Exception as e:
         conn.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500

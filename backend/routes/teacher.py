@@ -148,7 +148,14 @@ def start_attendance_session():
                 subj_row = cursor.fetchone()
                 subject_name = subj_row["subject_name"] if subj_row else "Unknown Subject"
 
-                cursor.execute("SELECT fcm_token FROM users WHERE role = 'Student' AND fcm_token IS NOT NULL")
+                cursor.execute(
+                    """
+                    SELECT u.fcm_token FROM users u
+                    JOIN classroom_students cst ON cst.student_id = u.id
+                    WHERE cst.classroom_id = %s AND u.role = 'Student' AND u.fcm_token IS NOT NULL
+                    """,
+                    (classroom_id,)
+                )
                 students = cursor.fetchall()
                 tokens = [s['fcm_token'] for s in students if s['fcm_token']]
 
@@ -187,17 +194,19 @@ def start_attendance_session():
         )
         session_id = cursor.fetchone()["id"]
         
-        # Initialize default ABSENT status for enrolled students in this subject
+        # Initialize default ABSENT status ONLY for students who actually
+        # belong to this classroom (classroom_students), not every student
+        # in the system and not merely "same department/semester".
         cursor.execute(
             """
-            INSERT INTO attendance_records (session_id, student_id, status)
-            SELECT %s, u.id, 'ABSENT'
-            FROM users u
-            JOIN subjects sub ON (u.department_id = sub.department_id AND u.semester = sub.semester)
-            WHERE sub.id = %s AND u.role = 'Student'
+            INSERT INTO attendance_records (session_id, student_id, status, method)
+            SELECT %s, cst.student_id, 'ABSENT', 'AUTOMATIC'
+            FROM classroom_students cst
+            JOIN users u ON u.id = cst.student_id
+            WHERE cst.classroom_id = %s AND u.role = 'Student'
             ON CONFLICT (session_id, student_id) DO NOTHING
             """,
-            (session_id, subject_id)
+            (session_id, classroom_id)
         )
         conn.commit()
 
@@ -206,9 +215,14 @@ def start_attendance_session():
         subj_row = cursor.fetchone()
         subject_name = subj_row["subject_name"] if subj_row else "Unknown Subject"
 
-        # Get student device tokens
+        # Get device tokens ONLY for students belonging to this classroom
         cursor.execute(
-            "SELECT fcm_token FROM users WHERE role = 'Student' AND fcm_token IS NOT NULL"
+            """
+            SELECT u.fcm_token FROM users u
+            JOIN classroom_students cst ON cst.student_id = u.id
+            WHERE cst.classroom_id = %s AND u.role = 'Student' AND u.fcm_token IS NOT NULL
+            """,
+            (classroom_id,)
         )
         students = cursor.fetchall()
         tokens = [s['fcm_token'] for s in students if s['fcm_token']]
