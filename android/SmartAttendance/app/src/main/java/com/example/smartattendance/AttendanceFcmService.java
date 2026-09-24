@@ -13,12 +13,46 @@ import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 import org.json.JSONObject;
 
+/**
+ * ============================================================================
+ * WHAT THIS FILE DOES (folder 06 — Manual-Only Attendance Trigger)
+ * ============================================================================
+ * This is a DELIBERATELY SIMPLIFIED version of AttendanceFcmService.
+ *
+ * OLD BEHAVIOUR (removed): when a "START_ATTENDANCE" push arrived, this
+ * service used to immediately start a Wi-Fi scan IN THE BACKGROUND and try
+ * to mark attendance automatically, with no student action at all. That
+ * relied on Android letting a background service run a Wi-Fi scan reliably
+ * — which Android does NOT guarantee (background scans are aggressively
+ * throttled by the OS from Android 9 onward, sometimes to once every ~30
+ * minutes). That's why students were seeing "beacon not in range" until
+ * they manually opened the app — the scan was silently being delayed or
+ * blocked by the OS, not actually failing to find the beacon.
+ *
+ * NEW BEHAVIOUR (this file): FCM's only job now is to show the student a
+ * notification saying "attendance is open — tap to mark it." No scanning
+ * happens here at all. The student must open the app and tap the
+ * "Mark Attendance" button themselves (see StudentDashboardActivity.java in
+ * this same folder) — at that point the app is in the FOREGROUND, where
+ * Android does NOT throttle Wi-Fi scans, so detection is instant and
+ * reliable every time.
+ *
+ * This trades "fully automatic" for "one tap, but it always works" — which
+ * is the same trade-off real attendance apps make, because "fully
+ * automatic while the phone is asleep" is not something any Android app is
+ * allowed to guarantee.
+ * ============================================================================
+ */
 public class AttendanceFcmService extends FirebaseMessagingService {
 
     private static final String TAG = "AttendanceFcmService";
     private static final String CHANNEL_ID = "attendance_channel";
     private static final String CHANNEL_NAME = "Class Attendance Alerts";
-    
+
+    // Kept for compatibility with StudentDashboardActivity's broadcast receiver,
+    // even though this service no longer sends automatic SUCCESS/FAILED/ABSENT
+    // broadcasts itself (marking now always happens from the foreground button,
+    // whose result is handled directly in StudentDashboardActivity).
     public static final String ACTION_ATTENDANCE_UPDATE = "com.example.smartattendance.ATTENDANCE_UPDATE";
     public static final String EXTRA_STATUS = "status";
     public static final String EXTRA_MESSAGE = "message";
@@ -27,7 +61,7 @@ public class AttendanceFcmService extends FirebaseMessagingService {
     public void onNewToken(@NonNull String token) {
         super.onNewToken(token);
         Log.d(TAG, "Refreshed FCM Token: " + token);
-        
+
         PrefsHelper prefsHelper = new PrefsHelper(getApplicationContext());
         prefsHelper.saveFcmToken(token);
 
@@ -53,95 +87,40 @@ public class AttendanceFcmService extends FirebaseMessagingService {
 
         if (remoteMessage.getData().size() > 0) {
             String action = remoteMessage.getData().get("action");
-            String sessionIdStr = remoteMessage.getData().get("session_id");
             String subjectName = remoteMessage.getData().get("subject_name");
 
-            if ("START_ATTENDANCE".equals(action) && sessionIdStr != null) {
-                try {
-                    int sessionId = Integer.parseInt(sessionIdStr);
-                    handleAutomaticAttendance(sessionId, subjectName != null ? subjectName : "Class");
-                } catch (NumberFormatException e) {
-                    Log.e(TAG, "Invalid session ID format: " + sessionIdStr);
-                }
+            if ("START_ATTENDANCE".equals(action)) {
+                handleAttendanceOpenedNotification(subjectName != null ? subjectName : "Class");
             }
         }
     }
 
-    private void handleAutomaticAttendance(int sessionId, String subjectName) {
+    /**
+     * Replaces the old handleAutomaticAttendance(...) method. Does ONE thing:
+     * shows a tap-to-open notification. No WifiScanner, no ApiClient calls,
+     * no background work of any kind — this keeps the service's on-receive
+     * work near-instant, which also makes it less likely to be killed by
+     * the OS before it finishes.
+     */
+    private void handleAttendanceOpenedNotification(String subjectName) {
         PrefsHelper prefsHelper = new PrefsHelper(getApplicationContext());
-        
+
         String role = prefsHelper.getUserRole();
-        // Ignore FCM attendance triggers silently for Teachers and Admins
         if (role != null && !"Student".equalsIgnoreCase(role.trim())) {
-            Log.d(TAG, "Logged-in user is not a Student (role: " + role + "). Skipping automatic attendance marking silently.");
+            Log.d(TAG, "Logged-in user is not a Student (role: " + role + "). Ignoring attendance-open push.");
             return;
         }
-
         if (!prefsHelper.isLoggedIn()) {
-            Log.w(TAG, "User is not logged in as Student. Skipping automatic attendance marking.");
+            Log.w(TAG, "User is not logged in as Student. Ignoring attendance-open push.");
             return;
         }
 
-        final int studentId = prefsHelper.getUserId();
-        
-        Log.d(TAG, "Starting Wi-Fi beacon scan before marking automatic attendance for " + subjectName);
-
-        // Perform Wi-Fi beacon scan first to verify student is inside classroom near beacon
-        WifiScanner wifiScanner = new WifiScanner(getApplicationContext());
-        wifiScanner.startScan(new WifiScanner.ScanCallback() {
-            @Override
-            public void onBeaconFound(String ssid, int rssi) {
-                Log.d(TAG, "Classroom Wi-Fi beacon detected (" + ssid + "). Marking attendance...");
-                showNotification("Automatic Attendance", "Classroom Beacon verified (" + ssid + "). Marking attendance for " + subjectName + "...", false);
-
-                ApiClient.getInstance(getApplicationContext()).markAttendance(sessionId, studentId, ssid, new ApiClient.ApiCallback() {
-                    @Override
-                    public void onSuccess(JSONObject response) {
-                        boolean success = response.optBoolean("success", true);
-                        boolean alreadyMarked = response.optBoolean("already_marked", false);
-                        String msg = response.optString("message", "Attendance recorded!");
-
-                        if (success) {
-                            String title = alreadyMarked ? "Attendance Verified" : "Attendance Marked ✓";
-                            String body = alreadyMarked ? "Already marked present for " + subjectName : "Successfully marked present for " + subjectName;
-                            showNotification(title, body, true);
-                            sendUiUpdateBroadcast("SUCCESS", msg);
-                        } else {
-                            showNotification("Attendance Verification Failed", msg, false);
-                            sendUiUpdateBroadcast("FAILED", msg);
-                        }
-                    }
-
-                    @Override
-                    public void onError(String errorMessage) {
-                        Log.e(TAG, "Failed to automatically mark attendance: " + errorMessage);
-                        showNotification("Attendance Failed", "Error marking attendance: " + errorMessage, false);
-                        sendUiUpdateBroadcast("ERROR", errorMessage);
-                    }
-                });
-            }
-
-            @Override
-            public void onScanFailed() {
-                Log.w(TAG, "Wi-Fi beacon scan failed or Wi-Fi turned off.");
-                showNotification("Attendance Scan Error", "Ensure Wi-Fi & Location (GPS) are turned ON.", false);
-                sendUiUpdateBroadcast("FAILED", "Wi-Fi or Location is disabled");
-            }
-
-            @Override
-            public void onScanFinished() {
-                Log.w(TAG, "No classroom Wi-Fi beacon found. Student is Absent.");
-                showNotification("Status: Absent", "Classroom Wi-Fi Beacon not in range for " + subjectName, false);
-                sendUiUpdateBroadcast("ABSENT", "Classroom beacon not in range");
-            }
-        });
-    }
-
-    private void sendUiUpdateBroadcast(String status, String message) {
-        Intent intent = new Intent(ACTION_ATTENDANCE_UPDATE);
-        intent.putExtra(EXTRA_STATUS, status);
-        intent.putExtra(EXTRA_MESSAGE, message);
-        sendBroadcast(intent);
+        Log.d(TAG, "Attendance session opened for " + subjectName + " — notifying student to mark manually.");
+        showNotification(
+                "Attendance is open",
+                "Tap here to mark your attendance for " + subjectName,
+                false
+        );
     }
 
     private void showNotification(String title, String contentText, boolean isSuccess) {
@@ -149,20 +128,20 @@ public class AttendanceFcmService extends FirebaseMessagingService {
 
         if (notificationManager == null) return;
 
-        // Create Notification Channel for Android Oreo and above
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
                     CHANNEL_NAME,
                     NotificationManager.IMPORTANCE_HIGH
             );
-            channel.setDescription("Notifications related to automatic class attendance marking");
+            channel.setDescription("Notifications related to class attendance");
             channel.enableLights(true);
             channel.setVibrationPattern(new long[]{0, 500, 250, 500});
             notificationManager.createNotificationChannel(channel);
         }
 
-        // Click action: open StudentDashboardActivity
+        // Tapping the notification opens StudentDashboardActivity, where the
+        // student sees the "Mark Attendance" button and taps it themselves.
         Intent intent = new Intent(this, StudentDashboardActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(
@@ -181,7 +160,6 @@ public class AttendanceFcmService extends FirebaseMessagingService {
                 .setDefaults(NotificationCompat.DEFAULT_ALL)
                 .setContentIntent(pendingIntent);
 
-        // Notify
         notificationManager.notify((int) System.currentTimeMillis(), builder.build());
     }
 }

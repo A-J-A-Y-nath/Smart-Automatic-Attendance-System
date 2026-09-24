@@ -60,14 +60,24 @@ except Exception as e:
     print(f"Critical error during Firebase Admin SDK initialization: {e}")
 
 
-def send_multicast_attendance_alert(session_id, classroom_id, subject_name, tokens):
+def send_multicast_attendance_alert(session_id, classroom_id, subject_name, tokens,
+                                     target_ssid=None, target_bssid=None, beacon_type="CLASSROOM"):
     """
     Sends a high-priority FCM multicast notification to target student devices.
-    
+
     :param session_id: The ID of the attendance session.
     :param classroom_id: The ID of the classroom.
     :param subject_name: The name of the subject.
     :param tokens: List of FCM device tokens to send to.
+    :param target_ssid: The Wi-Fi SSID the student device should scan for
+        (classroom beacon, teacher hotspot, or a chosen nearby network).
+        Sending this in the push payload means the student app can start
+        scanning immediately without an extra network round-trip.
+    :param target_bssid: The hardware MAC address of the target beacon, if
+        known. Preferred over SSID for matching because it can't collide
+        with another network that happens to share the same name.
+    :param beacon_type: 'CLASSROOM' | 'HOTSPOT' | 'NEARBY_WIFI' — informational,
+        shown to the student if useful, and logged for diagnostics.
     :return: A tuple of (success_count, failure_count) or None if Firebase is not ready.
     """
     if not firebase_ready or not tokens:
@@ -87,6 +97,9 @@ def send_multicast_attendance_alert(session_id, classroom_id, subject_name, toke
                 "session_id": str(session_id),
                 "classroom_id": str(classroom_id),
                 "subject_name": str(subject_name),
+                "target_ssid": str(target_ssid) if target_ssid else "",
+                "target_bssid": str(target_bssid) if target_bssid else "",
+                "beacon_type": str(beacon_type or "CLASSROOM"),
             },
             tokens=valid_tokens,
             android=messaging.AndroidConfig(

@@ -159,13 +159,19 @@ def start_attendance_session():
                 students = cursor.fetchall()
                 tokens = [s['fcm_token'] for s in students if s['fcm_token']]
 
+                cursor.execute("SELECT ssid, bssid FROM classrooms WHERE id = %s", (classroom_id,))
+                room = cursor.fetchone() or {}
+
                 success_count, failure_count = (0, 0)
                 if tokens:
                     success_count, failure_count = send_multicast_attendance_alert(
                         session_id=session_id,
                         classroom_id=classroom_id,
                         subject_name=subject_name,
-                        tokens=tokens
+                        tokens=tokens,
+                        target_ssid=room.get("ssid"),
+                        target_bssid=room.get("bssid"),
+                        beacon_type="CLASSROOM"
                     )
 
                 return jsonify({
@@ -235,11 +241,17 @@ def start_attendance_session():
                 "message": "Session created, but no registered student devices found for FCM."
             }), 200
 
+        cursor.execute("SELECT ssid, bssid FROM classrooms WHERE id = %s", (classroom_id,))
+        room = cursor.fetchone() or {}
+
         success_count, failure_count = send_multicast_attendance_alert(
             session_id=session_id,
             classroom_id=classroom_id,
             subject_name=subject_name,
-            tokens=tokens
+            tokens=tokens,
+            target_ssid=room.get("ssid"),
+            target_bssid=room.get("bssid"),
+            beacon_type="CLASSROOM"
         )
         
         return jsonify({

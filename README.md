@@ -138,6 +138,7 @@ Smart-Automatic-Attendance-System/
 - [x] Classroom Hardware Identity & Signal Thresholds — BSSID MAC address verification and RSSI proximity filtering (-85 dBm default)
 - [x] Classroom Lifecycle Management — Active/Inactive toggle states; inactive classrooms hidden from teachers/students while remaining visible to admins
 - [x] Classroom Student Roster Management — Direct student-to-classroom mapping via `classroom_students` table and Android multi-select checklist
+- [x] Classroom-Scoped Attendance Eligibility & FCM Alerts — Session initialization and FCM push notifications are scoped strictly to students mapped to the classroom via `classroom_students`
 
 ---
 

@@ -357,6 +357,7 @@
 * Enable administrators to explicitly manage which students belong to each classroom.
 * Ensure administrators have full visibility over both active and inactive classrooms in the dashboard.
 * Prevent inactive classrooms from disappearing from admin controls.
+* Scope attendance session eligibility, initial ABSENT record population, and FCM push alerts strictly to enrolled students belonging to the active classroom (`classroom_students`).
 
 ### 🛠️ Work Completed
 1. **Classroom-Student Roster Engine (`backend/routes/admin.py`)**:
@@ -369,13 +370,19 @@
 3. **Admin Classroom Visibility & Synchronization**:
    * Fixed `/api/admin/classrooms` endpoint to default `include_inactive = true` so administrators can always see, edit, and reactivate inactive classrooms.
    * Updated Android app to query `/api/admin/classrooms?include_inactive=true` and display `[INACTIVE]` tags across selection dialogs and dropdown menus.
+4. **Classroom-Scoped Session & FCM Dispatch Enforcement (`backend/routes/teacher.py`, `backend/routes/admin.py`)**:
+   * Updated `/api/teacher/start-session` and `/api/admin/sessions/start` to strictly query `classroom_students` for enrolled students.
+   * Default `ABSENT` status is now initialized only for students explicitly mapped to the active classroom.
+   * Multicast FCM push alerts are now filtered strictly to device tokens of students mapped to that classroom, preventing notifications from being dispatched to uninvolved students.
 
 ### 🧪 Verification & Outcome
 * Student roster management tested and verified via live PUT/GET requests.
 * Verified that inactive classrooms (e.g. `MCA 5G`) now remain visible to Administrators with `🚫 [INACTIVE]` badges and can be reactivated directly from the Android UI.
+* Verified that when a session starts, FCM notifications and default ABSENT records are generated only for students assigned to that classroom.
 
 ### 📁 Artifacts Produced
 * [`backend/routes/admin.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/admin.py)
+* [`backend/routes/teacher.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/teacher.py)
 * [`AdminDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/AdminDashboardActivity.java)
 
 ---

@@ -34,9 +34,23 @@ public class WifiScanner {
     }
 
     private String targetSsidFilter = null;
+    private String targetBssidFilter = null;
 
     public void startScan(final String targetSsid, final ScanCallback callback) {
         this.targetSsidFilter = targetSsid;
+        this.targetBssidFilter = null;
+        startScan(callback);
+    }
+
+    /**
+     * Preferred entry point when the backend told us exactly which beacon
+     * to look for (via FCM data payload: target_ssid / target_bssid).
+     * BSSID (hardware MAC) is a stronger identifier than SSID because two
+     * unrelated networks can share the same SSID, so it is checked first.
+     */
+    public void startScan(final String targetSsid, final String targetBssid, final ScanCallback callback) {
+        this.targetSsidFilter = targetSsid;
+        this.targetBssidFilter = (targetBssid != null && !targetBssid.trim().isEmpty()) ? targetBssid.trim() : null;
         startScan(callback);
     }
 
@@ -49,10 +63,11 @@ public class WifiScanner {
             WifiInfo wifiInfo = wifiManager.getConnectionInfo();
             if (wifiInfo != null) {
                 String connectedSsid = wifiInfo.getSSID();
+                String connectedBssid = wifiInfo.getBSSID();
                 if (connectedSsid != null) {
                     connectedSsid = connectedSsid.replace("\"", "").trim();
-                    Log.d(TAG, "Connected Wi-Fi SSID: " + connectedSsid);
-                    if (isMatchingBeacon(connectedSsid)) {
+                    Log.d(TAG, "Connected Wi-Fi SSID: " + connectedSsid + " BSSID: " + connectedBssid);
+                    if (isMatchingBeacon(connectedSsid, connectedBssid)) {
                         callback.onBeaconFound(connectedSsid, wifiInfo.getRssi());
                         return true;
                     }
@@ -67,7 +82,7 @@ public class WifiScanner {
             List<ScanResult> results = wifiManager.getScanResults();
             if (results != null) {
                 for (ScanResult result : results) {
-                    if (isMatchingBeacon(result.SSID)) {
+                    if (isMatchingBeacon(result.SSID, result.BSSID)) {
                         callback.onBeaconFound(result.SSID, result.level);
                         return true;
                     }
@@ -135,11 +150,25 @@ public class WifiScanner {
     }
 
     private boolean isMatchingBeacon(String detectedSsid) {
+        return isMatchingBeacon(detectedSsid, null);
+    }
+
+    private boolean isMatchingBeacon(String detectedSsid, String detectedBssid) {
+        // 1. BSSID match is authoritative when we have a target BSSID: a MAC
+        // address cannot collide the way two networks can share an SSID.
+        if (targetBssidFilter != null && detectedBssid != null && !detectedBssid.trim().isEmpty()) {
+            if (targetBssidFilter.equalsIgnoreCase(detectedBssid.trim())) {
+                return true;
+            }
+        }
+
         if (detectedSsid == null || detectedSsid.trim().isEmpty()) return false;
-        
+
         String cleanDetected = detectedSsid.replace("\"", "").replace("'", "").trim().toLowerCase();
-        
-        // 1. Exact or direct match with the target classroom SSID (e.g. esp8266-mca101, MCA_ROOM_101)
+
+        // 2. Exact or direct match with the SSID the backend told us to look for
+        // (this is the classroom's actual configured SSID, a teacher hotspot,
+        // or a nearby network chosen for this session — NOT a guess).
         if (targetSsidFilter != null && !targetSsidFilter.trim().isEmpty()) {
             String cleanTarget = targetSsidFilter.replace("\"", "").replace("'", "").trim().toLowerCase();
             if (cleanDetected.equals(cleanTarget) || cleanDetected.contains(cleanTarget) || cleanTarget.contains(cleanDetected)) {
@@ -147,22 +176,28 @@ public class WifiScanner {
             }
         }
 
-        // 2. Strict hardware beacon prefixes ONLY (NO generic "wifi" or "room")
-        return cleanDetected.contains("esp8266") ||
-               cleanDetected.contains("mca_room_") ||
-               cleanDetected.startsWith("beacon_") ||
-               cleanDetected.startsWith("mca_");
+        // 3. Fallback ONLY when no target was supplied at all (e.g. legacy
+        // caller or offline cached check): recognize known hardware beacon
+        // naming conventions used by this project's ESP8266 devices.
+        if (targetSsidFilter == null || targetSsidFilter.trim().isEmpty()) {
+            return cleanDetected.contains("esp8266") ||
+                   cleanDetected.contains("mca_room_") ||
+                   cleanDetected.startsWith("beacon_") ||
+                   cleanDetected.startsWith("mca_");
+        }
+
+        return false;
     }
 
     @SuppressLint("MissingPermission")
     private void scanSuccess(ScanCallback callback) {
         List<ScanResult> results = wifiManager.getScanResults();
         Log.d(TAG, "Scan succeeded. Found " + (results != null ? results.size() : 0) + " networks.");
-        
+
         if (results != null) {
             for (ScanResult result : results) {
-                Log.d(TAG, "Detected SSID: " + result.SSID + " (RSSI: " + result.level + ")");
-                if (isMatchingBeacon(result.SSID)) {
+                Log.d(TAG, "Detected SSID: " + result.SSID + " BSSID: " + result.BSSID + " (RSSI: " + result.level + ")");
+                if (isMatchingBeacon(result.SSID, result.BSSID)) {
                     callback.onBeaconFound(result.SSID, result.level);
                     return;
                 }
@@ -178,7 +213,7 @@ public class WifiScanner {
             List<ScanResult> results = wifiManager != null ? wifiManager.getScanResults() : null;
             if (results != null) {
                 for (ScanResult result : results) {
-                    if (isMatchingBeacon(result.SSID)) {
+                    if (isMatchingBeacon(result.SSID, result.BSSID)) {
                         callback.onBeaconFound(result.SSID, result.level);
                         return;
                     }

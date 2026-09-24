@@ -27,6 +27,51 @@ def admin_health():
     return jsonify({"status": "success", "message": "Admin API module is online."}), 200
 
 
+@admin_bp.route("/stats", methods=["GET"])
+@token_required
+@role_required(["Admin"])
+def admin_stats():
+    """GET /api/admin/stats — Aggregate metrics for admin dashboard"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT COUNT(*) AS total FROM users WHERE role='Student'")
+        total_students = cursor.fetchone()['total']
+        cursor.execute("SELECT COUNT(*) AS total FROM users WHERE role='Teacher'")
+        total_teachers = cursor.fetchone()['total']
+        cursor.execute("SELECT COUNT(*) AS total FROM users WHERE role='Admin'")
+        total_admins = cursor.fetchone()['total']
+        cursor.execute("SELECT COUNT(*) AS total FROM subjects")
+        total_subjects = cursor.fetchone()['total']
+        cursor.execute("SELECT COUNT(*) AS total FROM classrooms WHERE is_active=TRUE")
+        active_classrooms = cursor.fetchone()['total']
+        cursor.execute("SELECT COUNT(*) AS total FROM classrooms")
+        total_classrooms = cursor.fetchone()['total']
+        cursor.execute("SELECT COUNT(*) AS total FROM attendance_sessions WHERE status='ACTIVE'")
+        active_sessions = cursor.fetchone()['total']
+        cursor.execute("SELECT COUNT(*) AS total FROM attendance_records")
+        total_attendance = cursor.fetchone()['total']
+        return jsonify({
+            "status": "success",
+            "stats": {
+                "total_students": total_students,
+                "total_teachers": total_teachers,
+                "total_admins": total_admins,
+                "total_subjects": total_subjects,
+                "active_classrooms": active_classrooms,
+                "total_classrooms": total_classrooms,
+                "active_sessions": active_sessions,
+                "total_attendance": total_attendance
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+
 # ==========================================
 # USER MANAGEMENT
 # ==========================================
@@ -675,11 +720,16 @@ def admin_start_session():
         students = cursor.fetchall()
         tokens = [row['fcm_token'] for row in students if row['fcm_token']]
 
+        cursor.execute("SELECT ssid, bssid FROM classrooms WHERE id = %s", (classroom_id,))
+        room = cursor.fetchone() or {}
+
         dispatched = 0
         if tokens:
             dispatched, _ = send_multicast_attendance_alert(
                 session_id=session_id, classroom_id=classroom_id,
-                subject_name=subject_name, tokens=tokens
+                subject_name=subject_name, tokens=tokens,
+                target_ssid=room.get("ssid"), target_bssid=room.get("bssid"),
+                beacon_type="CLASSROOM"
             )
 
         return jsonify({

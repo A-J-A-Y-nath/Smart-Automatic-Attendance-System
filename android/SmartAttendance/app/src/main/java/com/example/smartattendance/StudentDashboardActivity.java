@@ -111,6 +111,7 @@ public class StudentDashboardActivity extends AppCompatActivity {
 //        }
 
         btnScan.setOnClickListener(v -> startScanning());
+        btnScan.setText("Mark Attendance");
 
         // Initialize BroadcastReceiver for automatic attendance updates from FCM Service
         attendanceUpdateReceiver = new android.content.BroadcastReceiver() {
@@ -251,10 +252,6 @@ public class StudentDashboardActivity extends AppCompatActivity {
                             btnScan.setEnabled(false);
                         }
                     }.start();
-
-                    if (isNewSession) {
-                        startScanning();
-                    }
 
                 } else {
                     currentSessionId = -1;

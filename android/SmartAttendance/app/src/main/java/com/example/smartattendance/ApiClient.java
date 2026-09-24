@@ -22,7 +22,7 @@ public class ApiClient {
     // Use 10.0.2.2 for Android Emulator connecting to localhost
     // Use your computer's local IP (e.g. 192.168.x.x) if testing on a physical device
     // public static final String BASE_URL = "https://smart-automatic-attendance-system.onrender.com";
-    public static final String BASE_URL = "http://192.168.1.7:5000";
+    public static final String BASE_URL = "http://10.140.33.142:5000";
     private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
 
     private static ApiClient instance;
