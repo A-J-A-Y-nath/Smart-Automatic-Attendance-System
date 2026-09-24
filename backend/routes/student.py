@@ -66,11 +66,13 @@ def get_active_session():
     """
     GET /api/student/active-session
     Returns details of the currently ACTIVE attendance session for students.
+    Only returns an active session if the student belongs to that classroom!
     """
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        now = datetime.datetime.now()
+        current_user = getattr(g, "current_user", None)
+        student_id = current_user.get("user_id") if current_user else None
 
         # 1. Auto-expire old sessions
         cursor.execute(
@@ -78,11 +80,15 @@ def get_active_session():
         )
         conn.commit()
 
+        if not student_id:
+            return jsonify({"status": "success", "active_session": None, "message": "User not authenticated"}), 200
+
         sql = """
             SELECT 
                 s.id as session_id,
                 s.start_time,
                 s.end_time,
+                EXTRACT(EPOCH FROM (s.end_time - CURRENT_TIMESTAMP)) AS rem_sec,
                 sub.subject_name,
                 sub.subject_code,
                 t.name as teacher_name,
@@ -92,23 +98,19 @@ def get_active_session():
             JOIN subjects sub ON s.subject_id = sub.id
             JOIN users t ON s.teacher_id = t.id
             JOIN classrooms c ON s.classroom_id = c.id
+            JOIN classroom_students cs ON cs.classroom_id = s.classroom_id AND cs.student_id = %s
             WHERE s.status = 'ACTIVE'
             ORDER BY s.id DESC
             LIMIT 1
         """
-        cursor.execute(sql)
+        cursor.execute(sql, (student_id,))
         session = cursor.fetchone()
         if session:
-            end_t = session.get("end_time")
-            if end_t:
-                now_cmp = datetime.datetime.now(end_t.tzinfo) if end_t.tzinfo else datetime.datetime.now()
-                rem_sec = int((end_t - now_cmp).total_seconds())
-            else:
-                rem_sec = 300
+            rem_sec = int(session.get("rem_sec") or 0)
             session["remaining_seconds"] = max(0, rem_sec)
             return jsonify({"status": "success", "active_session": session}), 200
         else:
-            return jsonify({"status": "success", "active_session": None, "message": "No active session"}), 200
+            return jsonify({"status": "success", "active_session": None, "message": "No active session for your enrolled classes"}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
@@ -128,30 +130,29 @@ def mark_attendance():
     cursor = conn.cursor()
     
     try:
-        now = datetime.datetime.now()
-
         # 1. Auto-expire old sessions first
         cursor.execute(
             "UPDATE attendance_sessions SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND end_time IS NOT NULL AND end_time <= CURRENT_TIMESTAMP"
         )
         conn.commit()
 
-        # 2. Check if requested session is active or fetch latest ACTIVE session
+        # 2. Check if requested session is active AND student belongs to that classroom
         sql = """
             SELECT s.id, s.status, c.ssid as target_ssid 
             FROM attendance_sessions s
             JOIN classrooms c ON s.classroom_id = c.id
+            JOIN classroom_students cs ON cs.classroom_id = s.classroom_id AND cs.student_id = %s
             WHERE s.status = 'ACTIVE'
         """
         if session_id and session_id != -1:
-            cursor.execute(sql + " AND s.id = %s", (session_id,))
+            cursor.execute(sql + " AND s.id = %s", (student_id, session_id))
         else:
-            cursor.execute(sql + " ORDER BY s.id DESC LIMIT 1")
+            cursor.execute(sql + " ORDER BY s.id DESC LIMIT 1", (student_id,))
             
         active_session = cursor.fetchone()
 
         if not active_session:
-            return jsonify({"success": False, "message": "No active class session currently. Please ask your teacher to start attendance!"}), 200
+            return jsonify({"success": False, "message": "No active class session found for your enrolled classes. Attendance denied."}), 200
 
         resolved_session_id = active_session["id"]
         target_ssid = (active_session.get("target_ssid") or "").strip()
@@ -235,18 +236,13 @@ def get_my_stats():
                 sub.subject_name,
                 sub.subject_code,
                 COUNT(DISTINCT s.id)  AS total_sessions,
-                COUNT(DISTINCT ar.session_id) AS present_count
+                COUNT(DISTINCT CASE WHEN ar.status = 'PRESENT' THEN ar.session_id END) AS present_count
             FROM attendance_sessions s
             JOIN subjects sub ON s.subject_id = sub.id
+            JOIN classroom_students cs ON cs.classroom_id = s.classroom_id AND cs.student_id = %s
             LEFT JOIN attendance_records ar
                 ON ar.session_id = s.id AND ar.student_id = %s
             WHERE s.status IN ('ACTIVE', 'CLOSED', 'EXPIRED')
-              AND sub.id IN (
-                  SELECT DISTINCT s2.subject_id
-                  FROM attendance_sessions s2
-                  JOIN attendance_records ar2 ON ar2.session_id = s2.id
-                  WHERE ar2.student_id = %s
-              )
             GROUP BY sub.id, sub.subject_name, sub.subject_code
             ORDER BY sub.subject_name
         """, (current_user["user_id"], current_user["user_id"]))

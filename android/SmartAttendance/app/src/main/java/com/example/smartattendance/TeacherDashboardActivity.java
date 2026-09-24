@@ -524,28 +524,47 @@ public class TeacherDashboardActivity extends AppCompatActivity {
                         String sDate = sess.optString("session_date", "N/A");
                         String startTime = sess.optString("start_time_formatted", "");
                         String room = sess.optString("room_name", "");
-                        int count = sess.optInt("present_count", 0);
+                        int presentCount = sess.optInt("present_count", 0);
+                        int absentCount = sess.optInt("absent_count", 0);
 
                         sb.append("📅 Date: ").append(sDate)
                           .append("  (").append(startTime).append(")\n")
                           .append("Room: ").append(room.isEmpty() ? "N/A" : room)
-                          .append("  •  Present Students: ").append(count).append("\n");
+                          .append("  •  Present: ").append(presentCount)
+                          .append("  •  Absent: ").append(absentCount).append("\n");
 
-                        JSONArray students = sess.optJSONArray("students");
-                        if (students != null && students.length() > 0) {
-                            for (int j = 0; j < students.length(); j++) {
-                                JSONObject st = students.getJSONObject(j);
+                        JSONArray presentStudents = sess.optJSONArray("present_students");
+                        if (presentStudents == null) presentStudents = sess.optJSONArray("students");
+                        JSONArray absentStudents = sess.optJSONArray("absent_students");
+
+                        sb.append("  ✅ Present (").append(presentCount).append("):\n");
+                        if (presentStudents != null && presentStudents.length() > 0) {
+                            for (int j = 0; j < presentStudents.length(); j++) {
+                                JSONObject st = presentStudents.getJSONObject(j);
                                 String name = st.optString("student_name", "Student");
                                 String regNo = st.optString("register_no", "");
                                 String time = st.optString("attendance_time", "");
 
-                                sb.append("  └ ").append(j + 1).append(". ").append(name)
+                                sb.append("    └ ").append(j + 1).append(". ").append(name)
                                   .append(" (").append(regNo.isEmpty() ? "N/A" : regNo).append(")")
-                                  .append(" • ").append(time).append("\n");
+                                  .append(time.isEmpty() ? "" : " • " + time).append("\n");
                             }
                         } else {
-                            sb.append("  └ No students marked present.\n");
+                            sb.append("    └ No students marked present.\n");
                         }
+
+                        if (absentStudents != null && absentStudents.length() > 0) {
+                            sb.append("  ❌ Absent (").append(absentStudents.length()).append("):\n");
+                            for (int k = 0; k < absentStudents.length(); k++) {
+                                JSONObject st = absentStudents.getJSONObject(k);
+                                String name = st.optString("student_name", "Student");
+                                String regNo = st.optString("register_no", "");
+
+                                sb.append("    └ ").append(k + 1).append(". ").append(name)
+                                  .append(" (").append(regNo.isEmpty() ? "N/A" : regNo).append(")\n");
+                            }
+                        }
+
                         if (i < sessions.length() - 1) {
                             sb.append("\n----------------------------------------\n\n");
                         }

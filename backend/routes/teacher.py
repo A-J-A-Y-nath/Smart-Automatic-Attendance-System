@@ -119,15 +119,16 @@ def start_attendance_session():
         
         # Close any active session for this teacher for OTHER subjects
         cursor.execute(
-            "UPDATE attendance_sessions SET status = 'CLOSED', end_time = %s WHERE teacher_id = %s AND subject_id != %s AND status = 'ACTIVE'",
-            (now, teacher_id, subject_id)
+            "UPDATE attendance_sessions SET status = 'CLOSED', end_time = CURRENT_TIMESTAMP WHERE teacher_id = %s AND subject_id != %s AND status = 'ACTIVE'",
+            (teacher_id, subject_id)
         )
         conn.commit()
 
         # Check if an ACTIVE session already exists for this teacher & subject
         cursor.execute(
             """
-            SELECT id, end_time FROM attendance_sessions 
+            SELECT id, end_time, EXTRACT(EPOCH FROM (end_time - CURRENT_TIMESTAMP)) AS rem_sec
+            FROM attendance_sessions 
             WHERE subject_id = %s AND teacher_id = %s AND status = 'ACTIVE'
             """,
             (subject_id, teacher_id)
@@ -135,12 +136,7 @@ def start_attendance_session():
         existing_session = cursor.fetchone()
 
         if existing_session:
-            end_t = existing_session["end_time"]
-            if end_t:
-                now_cmp = datetime.datetime.now(end_t.tzinfo) if end_t.tzinfo else datetime.datetime.now()
-                rem_sec = int((end_t - now_cmp).total_seconds())
-            else:
-                rem_sec = 300
+            rem_sec = int(existing_session.get("rem_sec") or 0)
 
             if rem_sec > 0:
                 session_id = existing_session["id"]
@@ -189,24 +185,25 @@ def start_attendance_session():
                 )
                 conn.commit()
 
-        # Create new session with a 5-minute active window
-        session_date = now.date()
-        start_time = now
-        end_time = now + datetime.timedelta(minutes=5)
-
+        # Create new session with a 5-minute active window using DB clock
         cursor.execute(
-            "INSERT INTO attendance_sessions (subject_id, classroom_id, teacher_id, session_date, start_time, end_time, status) VALUES (%s, %s, %s, %s, %s, %s, 'ACTIVE') RETURNING id",
-            (subject_id, classroom_id, teacher_id, session_date, start_time, end_time)
+            """
+            INSERT INTO attendance_sessions 
+                (subject_id, classroom_id, teacher_id, session_date, start_time, end_time, status) 
+            VALUES 
+                (%s, %s, %s, CURRENT_DATE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '5 minutes', 'ACTIVE') 
+            RETURNING id
+            """,
+            (subject_id, classroom_id, teacher_id)
         )
         session_id = cursor.fetchone()["id"]
         
         # Initialize default ABSENT status ONLY for students who actually
-        # belong to this classroom (classroom_students), not every student
-        # in the system and not merely "same department/semester".
+        # belong to this classroom (classroom_students). attendance_time is NULL until marked.
         cursor.execute(
             """
-            INSERT INTO attendance_records (session_id, student_id, status, method)
-            SELECT %s, cst.student_id, 'ABSENT', 'AUTOMATIC'
+            INSERT INTO attendance_records (session_id, student_id, status, method, attendance_time)
+            SELECT %s, cst.student_id, 'ABSENT', 'AUTOMATIC', NULL
             FROM classroom_students cst
             JOIN users u ON u.id = cst.student_id
             WHERE cst.classroom_id = %s AND u.role = 'Student'
@@ -425,7 +422,8 @@ def get_subject_history(subject_id):
         cursor.execute("""
             SELECT s.id as session_id, s.session_date, s.start_time, s.end_time, s.status,
                    c.room_name,
-                   (SELECT COUNT(*) FROM attendance_records ar WHERE ar.session_id = s.id) as present_count
+                   (SELECT COUNT(*) FROM attendance_records ar WHERE ar.session_id = s.id AND ar.status = 'PRESENT') as present_count,
+                   (SELECT COUNT(*) FROM attendance_records ar WHERE ar.session_id = s.id AND ar.status = 'ABSENT') as absent_count
             FROM attendance_sessions s
             JOIN classrooms c ON s.classroom_id = c.id
             WHERE s.subject_id = %s AND s.teacher_id = %s
@@ -444,12 +442,21 @@ def get_subject_history(subject_id):
                 FROM attendance_records ar
                 JOIN users u ON ar.student_id = u.id
                 WHERE ar.session_id = %s AND u.role = 'Student'
-                ORDER BY ar.attendance_time ASC
+                ORDER BY ar.status DESC, ar.attendance_time ASC, u.name ASC
             """, (sess["session_id"],))
-            students = cursor.fetchall()
-            for st in students:
+            records = cursor.fetchall()
+            present_students = []
+            absent_students = []
+            for st in records:
                 st["attendance_time"] = format_to_ist(st.get("attendance_time"))
-            sess["students"] = students
+                if st.get("status") == "PRESENT":
+                    present_students.append(st)
+                else:
+                    absent_students.append(st)
+
+            sess["present_students"] = present_students
+            sess["absent_students"] = absent_students
+            sess["students"] = present_students  # Backwards compatibility: only actual present students!
 
         return jsonify({
             "status": "success",
