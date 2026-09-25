@@ -148,6 +148,8 @@ Smart-Automatic-Attendance-System/
 - [x] Sliding-Window Rate Limiting — Max 3 mark-attendance requests per 10s returning HTTP 429 to defeat automated brute-force code guessing
 - [x] Faculty Manual Attendance Override — `/api/teacher/mark-manual` enables faculty to mark absent students as Present with an explicit audit trail
 - [x] Database Clock Synchronization — Server and database operations synchronized using PostgreSQL `CURRENT_TIMESTAMP` to prevent timezone skew
+- [x] Flexible Session Beacon Overrides — Session-only beacon sources (**Classroom Beacon**, **Teacher Hotspot**, and **Nearby Wi-Fi** picker) without altering permanent classroom settings
+- [x] Concurrency & Race Condition Resilience — Gracefully catches PostgreSQL `UniqueViolation` on concurrent session start requests without throwing HTTP 500 errors
 
 ---
 

@@ -12,6 +12,7 @@ import datetime
 from utils.fcm_service import send_multicast_attendance_alert
 from utils.session_code import get_current_code, get_valid_codes, seconds_until_next_rotation
 import secrets
+import psycopg2.errors
 
 IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
 
@@ -104,7 +105,18 @@ def start_attendance_session():
     classroom_id = data.get("classroom_id")
     subject_id = data.get("subject_id")
     teacher_id = data.get("teacher_id")
+    # (folder 11) Beacon Options: default is the classroom's own permanent
+    # beacon. Teacher can use their own hotspot, or a nearby network they
+    # picked, for THIS SESSION ONLY — never overwrites the classroom's
+    # saved ssid/bssid.
+    beacon_type = (data.get("beacon_type") or "CLASSROOM").strip().upper()
+    override_ssid = (data.get("override_ssid") or "").strip() or None
+    override_bssid = (data.get("override_bssid") or "").strip() or None
 
+    if beacon_type not in ("CLASSROOM", "HOTSPOT", "NEARBY_WIFI"):
+        return jsonify({"error": "beacon_type must be CLASSROOM, HOTSPOT, or NEARBY_WIFI"}), 400
+    if beacon_type in ("HOTSPOT", "NEARBY_WIFI") and not override_ssid:
+        return jsonify({"error": f"override_ssid is required when beacon_type is {beacon_type}"}), 400
     if not all([classroom_id, subject_id, teacher_id]):
         return jsonify({"error": "Missing required fields"}), 400
 
@@ -190,16 +202,38 @@ def start_attendance_session():
         code_secret = secrets.token_hex(16)
 
         # Create new session with a 5-minute active window using PostgreSQL clock
-        cursor.execute(
-            """
-            INSERT INTO attendance_sessions 
-                (subject_id, classroom_id, teacher_id, session_date, start_time, end_time, status, code_secret) 
-            VALUES 
-                (%s, %s, %s, CURRENT_DATE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '5 minutes', 'ACTIVE', %s) 
-            RETURNING id
-            """,
-            (subject_id, classroom_id, teacher_id, code_secret)
-        )
+        try:
+            cursor.execute(
+                """
+                INSERT INTO attendance_sessions 
+                    (subject_id, classroom_id, teacher_id, session_date, start_time, end_time, status, code_secret,
+                     beacon_type, override_ssid, override_bssid) 
+                VALUES 
+                    (%s, %s, %s, CURRENT_DATE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '5 minutes', 'ACTIVE', %s,
+                     %s, %s, %s) 
+                RETURNING id
+                """,
+                (subject_id, classroom_id, teacher_id, code_secret, beacon_type, override_ssid, override_bssid)
+            )
+        except psycopg2.errors.UniqueViolation:
+            # (folder 12) two "Start Session" taps raced each other and both
+            # passed the earlier existing-session check before either
+            # committed. The DB-level unique index (migration 005) caught
+            # the second insert — recover gracefully instead of a 500.
+            conn.rollback()
+            cursor.execute(
+                "SELECT id, end_time, EXTRACT(EPOCH FROM (end_time - CURRENT_TIMESTAMP)) AS rem_sec FROM attendance_sessions WHERE teacher_id = %s AND subject_id = %s AND status = 'ACTIVE'",
+                (teacher_id, subject_id)
+            )
+            winner = cursor.fetchone()
+            if winner:
+                rem_sec = int(winner.get("rem_sec") or 0)
+                return jsonify({
+                    "success": True, "already_active": True,
+                    "session_id": winner["id"], "remaining_seconds": max(rem_sec, 0),
+                    "message": "Another request already started this session a moment ago."
+                }), 200
+            return jsonify({"error": "Could not start session due to a conflicting request. Please try again."}), 409
         session_id = cursor.fetchone()["id"]
         
         # Initialize default ABSENT status ONLY for students who actually
@@ -245,15 +279,17 @@ def start_attendance_session():
 
         cursor.execute("SELECT ssid, bssid FROM classrooms WHERE id = %s", (classroom_id,))
         room = cursor.fetchone() or {}
+        effective_ssid = override_ssid or room.get("ssid")
+        effective_bssid = override_bssid or room.get("bssid")
 
         success_count, failure_count = send_multicast_attendance_alert(
             session_id=session_id,
             classroom_id=classroom_id,
             subject_name=subject_name,
             tokens=tokens,
-            target_ssid=room.get("ssid"),
-            target_bssid=room.get("bssid"),
-            beacon_type="CLASSROOM"
+            target_ssid=effective_ssid,
+            target_bssid=effective_bssid,
+            beacon_type=beacon_type
         )
         
         return jsonify({

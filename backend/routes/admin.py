@@ -16,6 +16,7 @@ from utils.password import hash_password
 from utils.fcm_service import send_multicast_attendance_alert
 import datetime
 import secrets
+import psycopg2.errors
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 
@@ -685,11 +686,16 @@ def admin_start_session():
 
         end_time = now + datetime.timedelta(minutes=5)
         code_secret = secrets.token_hex(16)  # folder 08: rotating anti-proxy code
-        cursor.execute("""
-            INSERT INTO attendance_sessions (subject_id, classroom_id, teacher_id, session_date, start_time, end_time, status, code_secret)
-            VALUES (%s,%s,%s,%s,%s,%s,'ACTIVE',%s)
-            RETURNING id
-        """, (subject_id, classroom_id, teacher_id, now.date(), now, end_time, code_secret))
+        try:
+            cursor.execute("""
+                INSERT INTO attendance_sessions (subject_id, classroom_id, teacher_id, session_date, start_time, end_time, status, code_secret)
+                VALUES (%s,%s,%s,%s,%s,%s,'ACTIVE',%s)
+                RETURNING id
+            """, (subject_id, classroom_id, teacher_id, now.date(), now, end_time, code_secret))
+        except psycopg2.errors.UniqueViolation:
+            # (folder 12) a concurrent request won the race despite the check above.
+            conn.rollback()
+            return jsonify({"status": "error", "message": "Active session already exists for this teacher and subject."}), 409
         session_id = cursor.fetchone()['id']
 
         # Same classroom-scoped eligibility rule used by the Teacher flow:

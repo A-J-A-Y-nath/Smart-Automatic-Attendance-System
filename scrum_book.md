@@ -476,6 +476,42 @@
 
 ---
 
+## 📅 Day 14: Flexible Session Beacon Overrides & Concurrency Safety
+**Date:** Phase 14  
+**Sprint Milestone:** Multi-Beacon Source Support & Concurrent Request Resilience  
+
+### 🎯 Objectives
+* Support flexible session-specific Wi-Fi beacon options (Classroom Beacon, Teacher Hotspot, Nearby Wi-Fi) without overwriting permanent classroom hardware settings.
+* Prevent race condition crashes (500 Internal Server Error) when concurrent "Start Session" requests are executed simultaneously.
+
+### 🛠️ Work Completed
+1. **Multi-Option Session Beacon Engine (`backend/routes/teacher.py`, `backend/routes/student.py`)**:
+   * Updated `POST /api/teacher/start-session` to accept `beacon_type` (`CLASSROOM`, `HOTSPOT`, `NEARBY_WIFI`), `override_ssid`, and `override_bssid`.
+   * Saved session-only overrides in `attendance_sessions` (`beacon_type`, `override_ssid`, `override_bssid`).
+   * Updated `student.py` attendance verification queries using `COALESCE(NULLIF(s.override_ssid, ''), c.ssid) as target_ssid` and `COALESCE(NULLIF(s.override_bssid, ''), c.bssid) as target_bssid`.
+2. **Android Beacon Option Dialog & Scanner Integration (`TeacherDashboardActivity.java`, `WifiScanner.java`, `ApiClient.java`)**:
+   * Added `showBeaconOptionDialog()` presenting **Classroom Beacon (default)**, **Teacher Hotspot** (manual SSID prompt), and **Nearby Wi-Fi** (scanned network picker dialog).
+   * Updated `WifiScanner.java` with `listVisibleNetworks()` for one-shot nearby network scanning.
+3. **Graceful Concurrency & Unique Violation Handling (`backend/routes/teacher.py`, `backend/routes/admin.py`)**:
+   * Wrapped session initialization in `try...except psycopg2.errors.UniqueViolation`.
+   * On race conditions where two start-session requests trigger simultaneously, the second request catches the DB constraint, rolls back gracefully, and returns `already_active: True` with the active session ID and remaining seconds.
+
+### 🧪 Verification & Outcome
+* Verified Classroom Beacon default flow works as expected.
+* Verified Teacher Hotspot and Nearby Wi-Fi overrides apply strictly to the active session and revert back to default on subsequent sessions.
+* Verified concurrent session start calls recover cleanly without server errors.
+* Gradle build (`:app:compileProdDebugJavaWithJavac`) passed with `BUILD SUCCESSFUL`.
+
+### 📁 Artifacts Produced
+* [`backend/routes/teacher.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/teacher.py)
+* [`backend/routes/student.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/student.py)
+* [`backend/routes/admin.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/admin.py)
+* [`TeacherDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/TeacherDashboardActivity.java)
+* [`WifiScanner.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/WifiScanner.java)
+* [`ApiClient.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/ApiClient.java)
+
+---
+
 ## 📊 Summary of Overall Progress & Metrics
 
 ![Progress](https://geps.dev/progress/100?dangerColor=8b0000&warningColor=fe8019&successColor=22c55e)
@@ -490,6 +526,7 @@
 | **ESP8266 Hardware** | ✅ 100% Complete | `██████████` | AP beacon broadcasting (`MCA_ROOM_101`), mDNS service responder. |
 | **Backend Security** | ✅ 100% Complete | `██████████` | Salted scrypt hashing, JWT tokens, RBAC decorators, rate limiting (HTTP 429). |
 | **Anti-Proxy Protection** | ✅ 100% Complete | `██████████` | One-device-per-session enforcement, 15s rotating codes, real-time teacher proxy alerts. |
+| **Beacon Flexibility** | ✅ 100% Complete | `██████████` | Session-only beacon overrides (Classroom, Teacher Hotspot, Nearby Wi-Fi picker). |
 | **Cloud Hosting** | ✅ 100% Complete | `██████████` | **Render Cloud Hosting** live production server over SSL/HTTPS. |
 | **Attendance APIs** | ✅ 100% Complete | `██████████` | `/start-session`, `/mark-attendance`, `/mark-manual`, `/my-stats`, `/active-roster`. |
 | **FCM Notifications**| ✅ 100% Complete | `██████████` | High-priority data payload multicast, foreground tap-to-mark flow. |
@@ -499,4 +536,4 @@
 | **Android App** | ✅ 100% Complete | `██████████` | Student, Teacher, Admin dashboards, Wi-Fi scanner, live roster, stats bars, code dialog. |
 
 ---
-*Scrum Log last updated for Day 13 completion.*
+*Scrum Log last updated for Day 14 completion.*
