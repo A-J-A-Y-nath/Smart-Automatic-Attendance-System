@@ -111,3 +111,4 @@ scratch/
 
 EXPOSED_CREDENTIALS.md
 Backend/.env.example
+ISSUE_EXPLANATION_AND_FIXES.txt

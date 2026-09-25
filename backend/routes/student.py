@@ -66,14 +66,14 @@ def get_active_session():
     """
     GET /api/student/active-session
     Returns details of the currently ACTIVE attendance session for students.
-    Only returns an active session if the student belongs to that classroom!
+    Only returns a session if the student is enrolled in that classroom!
     """
+    current_user = getattr(g, "current_user", None)
+    student_id = current_user.get("user_id") if current_user else None
+
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        current_user = getattr(g, "current_user", None)
-        student_id = current_user.get("user_id") if current_user else None
-
         # 1. Auto-expire old sessions
         cursor.execute(
             "UPDATE attendance_sessions SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND end_time IS NOT NULL AND end_time <= CURRENT_TIMESTAMP"
@@ -83,6 +83,7 @@ def get_active_session():
         if not student_id:
             return jsonify({"status": "success", "active_session": None, "message": "User not authenticated"}), 200
 
+        # Enforce that the student belongs to this classroom (classroom_students)
         sql = """
             SELECT 
                 s.id as session_id,
@@ -93,7 +94,8 @@ def get_active_session():
                 sub.subject_code,
                 t.name as teacher_name,
                 c.room_name,
-                c.ssid as target_ssid
+                c.ssid as target_ssid,
+                c.bssid as target_bssid
             FROM attendance_sessions s
             JOIN subjects sub ON s.subject_id = sub.id
             JOIN users t ON s.teacher_id = t.id
@@ -138,7 +140,8 @@ def mark_attendance():
 
         # 2. Check if requested session is active AND student belongs to that classroom
         sql = """
-            SELECT s.id, s.status, c.ssid as target_ssid 
+            SELECT s.id, s.status, s.classroom_id,
+                   c.ssid as target_ssid, c.bssid as target_bssid, c.rssi_threshold
             FROM attendance_sessions s
             JOIN classrooms c ON s.classroom_id = c.id
             JOIN classroom_students cs ON cs.classroom_id = s.classroom_id AND cs.student_id = %s
@@ -156,10 +159,40 @@ def mark_attendance():
 
         resolved_session_id = active_session["id"]
         target_ssid = (active_session.get("target_ssid") or "").strip()
+        target_bssid = (active_session.get("target_bssid") or "").strip()
 
-        # 3. Beacon Verification: Ensure student device detected/passed the classroom beacon SSID
+        # 2b. CLASSROOM MEMBERSHIP CHECK (double verification)
+        cursor.execute(
+            "SELECT 1 FROM classroom_students WHERE classroom_id = %s AND student_id = %s",
+            (active_session["classroom_id"], student_id)
+        )
+        if not cursor.fetchone():
+            return jsonify({
+                "success": False,
+                "message": "You are not enrolled in the classroom running this session. Attendance denied."
+            }), 200
+
+        # 3. Beacon Verification
         detected_ssid = (data.get("ssid") or data.get("beacon_ssid") or "").strip()
-        if target_ssid:
+        detected_bssid = (data.get("bssid") or "").strip()
+        detected_rssi = data.get("rssi")
+        try:
+            detected_rssi = int(detected_rssi) if detected_rssi is not None else None
+        except (TypeError, ValueError):
+            detected_rssi = None
+
+        beacon_verified = False
+
+        if target_bssid and detected_bssid:
+            if target_bssid.lower() == detected_bssid.lower():
+                beacon_verified = True
+            else:
+                return jsonify({
+                    "success": False,
+                    "message": "Detected beacon hardware address does not match the classroom's configured beacon. Attendance denied."
+                }), 200
+
+        if not beacon_verified and target_ssid:
             if not detected_ssid:
                 return jsonify({
                     "success": False, 
@@ -173,6 +206,17 @@ def mark_attendance():
                 return jsonify({
                     "success": False, 
                     "message": f"Detected SSID '{detected_ssid}' does not match classroom beacon '{target_ssid}'. Attendance denied."
+                }), 200
+            beacon_verified = True
+
+        # 3b. RSSI / proximity check
+        if detected_rssi is not None:
+            threshold = active_session.get("rssi_threshold")
+            threshold = threshold if threshold is not None else -85
+            if detected_rssi < threshold:
+                return jsonify({
+                    "success": False,
+                    "message": f"Beacon signal too weak ({detected_rssi} dBm, need >= {threshold} dBm). Move closer and try again."
                 }), 200
 
         # Check if student has already marked attendance as PRESENT for this session
@@ -192,12 +236,12 @@ def mark_attendance():
 
         cursor.execute(
             """
-            INSERT INTO attendance_records (session_id, student_id, status, attendance_time) 
-            VALUES (%s, %s, 'PRESENT', CURRENT_TIMESTAMP)
-            ON CONFLICT (session_id, student_id) 
-            DO UPDATE SET status = 'PRESENT', attendance_time = CURRENT_TIMESTAMP
+            INSERT INTO attendance_records (session_id, student_id, status, method, bssid, attendance_time)
+            VALUES (%s, %s, 'PRESENT', 'AUTOMATIC', %s, CURRENT_TIMESTAMP)
+            ON CONFLICT (session_id, student_id)
+            DO UPDATE SET status = 'PRESENT', method = 'AUTOMATIC', marked_by = NULL, bssid = %s, attendance_time = CURRENT_TIMESTAMP
             """,
-            (resolved_session_id, student_id)
+            (resolved_session_id, student_id, detected_bssid or None, detected_bssid or None)
         )
         conn.commit()
         return jsonify({
@@ -223,9 +267,9 @@ def get_my_stats():
     Returns per-subject attendance stats for the logged-in student:
       - subject_name, subject_code
       - total_sessions (distinct sessions for that subject)
-      - present_count (sessions where student marked attendance)
+      - present_count (sessions where student marked attendance as PRESENT)
       - percentage (present_count / total_sessions * 100)
-    Also returns overall_percentage across all subjects.
+    Also returns overall_percentage across all enrolled subjects.
     """
     current_user = g.current_user
     conn = get_connection()
@@ -315,4 +359,3 @@ def update_fcm_token():
     finally:
         cursor.close()
         conn.close()
-

@@ -152,6 +152,18 @@ public class ApiClient {
     }
 
     public void markAttendance(int sessionId, int studentId, String ssid, ApiCallback callback) {
+        markAttendance(sessionId, studentId, ssid, null, null, callback);
+    }
+
+    /**
+     * WHAT: sends bssid (hardware MAC of the detected beacon, if any) and
+     * rssi (signal strength in dBm, if any) alongside the existing ssid.
+     * WHY: the backend (folder 07) prefers BSSID over SSID when both are
+     * available, and rejects attendance if RSSI is weaker than the
+     * classroom's configured threshold. Both fields are optional — pass
+     * null if the scanner didn't capture them (older callers still work).
+     */
+    public void markAttendance(int sessionId, int studentId, String ssid, String bssid, Integer rssi, ApiCallback callback) {
         try {
             JSONObject json = new JSONObject();
             json.put("session_id", sessionId);
@@ -159,6 +171,12 @@ public class ApiClient {
             if (ssid != null && !ssid.isEmpty()) {
                 json.put("ssid", ssid);
                 json.put("beacon_ssid", ssid);
+            }
+            if (bssid != null && !bssid.isEmpty()) {
+                json.put("bssid", bssid);
+            }
+            if (rssi != null) {
+                json.put("rssi", rssi.intValue());
             }
 
             RequestBody body = RequestBody.create(json.toString(), JSON);

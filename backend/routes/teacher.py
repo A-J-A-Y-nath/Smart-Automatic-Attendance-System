@@ -2,7 +2,7 @@
 Teacher Routes Module
 =====================
 Provides Flask Blueprint for faculty operations 
-(Attendance Sessions, Subject Schedules, Class Roster).
+(Attendance Sessions, Subject Schedules, Class Roster, Manual Overrides).
 """
 
 from flask import Blueprint, jsonify, request, g
@@ -110,8 +110,6 @@ def start_attendance_session():
     cursor = conn.cursor()
     
     try:
-        now = datetime.datetime.now()
-
         # Auto-expire any past sessions that exceeded their end_time
         cursor.execute(
             "UPDATE attendance_sessions SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND end_time IS NOT NULL AND end_time <= CURRENT_TIMESTAMP"
@@ -185,7 +183,7 @@ def start_attendance_session():
                 )
                 conn.commit()
 
-        # Create new session with a 5-minute active window using DB clock
+        # Create new session with a 5-minute active window using PostgreSQL clock
         cursor.execute(
             """
             INSERT INTO attendance_sessions 
@@ -199,7 +197,8 @@ def start_attendance_session():
         session_id = cursor.fetchone()["id"]
         
         # Initialize default ABSENT status ONLY for students who actually
-        # belong to this classroom (classroom_students). attendance_time is NULL until marked.
+        # belong to this classroom (classroom_students).
+        # Explicitly set attendance_time = NULL so absent students have NO fake timestamp!
         cursor.execute(
             """
             INSERT INTO attendance_records (session_id, student_id, status, method, attendance_time)
@@ -282,6 +281,8 @@ def get_session_records(session_id):
                 ar.id as record_id,
                 ar.attendance_time,
                 ar.status,
+                ar.method,
+                mb.name as marked_by_name,
                 u.name as student_name,
                 u.register_no as student_register_no,
                 u.email as student_email,
@@ -294,6 +295,7 @@ def get_session_records(session_id):
             JOIN users t ON s.teacher_id = t.id
             JOIN subjects sub ON s.subject_id = sub.id
             JOIN classrooms c ON s.classroom_id = c.id
+            LEFT JOIN users mb ON ar.marked_by = mb.id
             WHERE s.id = %s
             ORDER BY ar.attendance_time DESC
         """
@@ -321,19 +323,84 @@ def stop_attendance_session():
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        now = datetime.datetime.now()
         cursor.execute(
             """
             UPDATE attendance_sessions 
-            SET status = 'CLOSED', end_time = %s 
+            SET status = 'CLOSED', end_time = CURRENT_TIMESTAMP 
             WHERE teacher_id = %s AND status = 'ACTIVE'
             """,
-            (now, current_user["user_id"])
+            (current_user["user_id"],)
         )
         conn.commit()
         return jsonify({
             "status": "success",
             "message": "Attendance session stopped successfully."
+        }), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@teacher_bp.route("/mark-manual", methods=["POST"])
+@token_required
+@role_required(["Teacher"])
+def mark_attendance_manual():
+    """
+    POST /api/teacher/mark-manual
+    Body: { "session_id": 12, "student_id": 34 }
+
+    Allows the teacher who owns a session to manually mark an absent student as Present.
+    """
+    current_user = g.current_user
+    teacher_id = current_user["user_id"]
+    data = request.get_json() or {}
+    session_id = data.get("session_id")
+    student_id = data.get("student_id")
+
+    if not session_id or not student_id:
+        return jsonify({"status": "error", "message": "session_id and student_id are required."}), 400
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT id, teacher_id, classroom_id FROM attendance_sessions WHERE id = %s",
+            (session_id,)
+        )
+        session = cursor.fetchone()
+        if not session:
+            return jsonify({"status": "error", "message": "Session not found."}), 404
+        if session["teacher_id"] != teacher_id:
+            return jsonify({"status": "error", "message": "You do not own this attendance session."}), 403
+
+        cursor.execute(
+            "SELECT 1 FROM classroom_students WHERE classroom_id = %s AND student_id = %s",
+            (session["classroom_id"], student_id)
+        )
+        if not cursor.fetchone():
+            return jsonify({
+                "status": "error",
+                "message": "That student does not belong to this session's classroom."
+            }), 400
+
+        cursor.execute(
+            """
+            INSERT INTO attendance_records (session_id, student_id, status, method, marked_by, attendance_time)
+            VALUES (%s, %s, 'PRESENT', 'MANUAL', %s, CURRENT_TIMESTAMP)
+            ON CONFLICT (session_id, student_id)
+            DO UPDATE SET status = 'PRESENT', method = 'MANUAL', marked_by = %s, attendance_time = CURRENT_TIMESTAMP
+            """,
+            (session_id, student_id, teacher_id, teacher_id)
+        )
+        conn.commit()
+        return jsonify({
+            "status": "success",
+            "message": "Attendance manually marked present.",
+            "session_id": session_id,
+            "student_id": student_id
         }), 200
     except Exception as e:
         conn.rollback()
@@ -356,8 +423,6 @@ def get_active_roster():
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        now = datetime.datetime.now()
-
         # Auto-expire any past sessions first
         cursor.execute(
             "UPDATE attendance_sessions SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND end_time IS NOT NULL AND end_time <= CURRENT_TIMESTAMP"
@@ -382,7 +447,7 @@ def get_active_roster():
         session_id = session["id"]
 
         cursor.execute("""
-            SELECT u.name as student_name, u.register_no, ar.attendance_time
+            SELECT u.name as student_name, u.register_no, ar.attendance_time, ar.method
             FROM attendance_records ar
             JOIN users u ON ar.student_id = u.id
             WHERE ar.session_id = %s AND ar.status = 'PRESENT' AND u.role = 'Student'
@@ -413,7 +478,8 @@ def get_active_roster():
 def get_subject_history(subject_id):
     """
     GET /api/teacher/subject-history/<subject_id>
-    Returns past attendance sessions and present students for the given subject.
+    Returns past attendance sessions, present count, absent count,
+    present students list, and absent students list for the given subject.
     """
     current_user = g.current_user
     conn = get_connection()
@@ -438,7 +504,7 @@ def get_subject_history(subject_id):
             sess["session_date"] = str(sess.get("session_date")) if sess.get("session_date") else ""
             
             cursor.execute("""
-                SELECT u.name as student_name, u.register_no, ar.attendance_time, ar.status
+                SELECT u.name as student_name, u.register_no, ar.attendance_time, ar.status, ar.method
                 FROM attendance_records ar
                 JOIN users u ON ar.student_id = u.id
                 WHERE ar.session_id = %s AND u.role = 'Student'
@@ -456,7 +522,7 @@ def get_subject_history(subject_id):
 
             sess["present_students"] = present_students
             sess["absent_students"] = absent_students
-            sess["students"] = present_students  # Backwards compatibility: only actual present students!
+            sess["students"] = present_students  # Backwards compatibility
 
         return jsonify({
             "status": "success",
