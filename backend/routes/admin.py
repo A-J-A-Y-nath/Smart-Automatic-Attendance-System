@@ -15,6 +15,7 @@ from database.db import get_connection
 from utils.password import hash_password
 from utils.fcm_service import send_multicast_attendance_alert
 import datetime
+import secrets
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 
@@ -683,11 +684,12 @@ def admin_start_session():
             return jsonify({"status": "error", "message": "Active session already exists for this teacher and subject."}), 409
 
         end_time = now + datetime.timedelta(minutes=5)
+        code_secret = secrets.token_hex(16)  # folder 08: rotating anti-proxy code
         cursor.execute("""
-            INSERT INTO attendance_sessions (subject_id, classroom_id, teacher_id, session_date, start_time, end_time, status)
-            VALUES (%s,%s,%s,%s,%s,%s,'ACTIVE')
+            INSERT INTO attendance_sessions (subject_id, classroom_id, teacher_id, session_date, start_time, end_time, status, code_secret)
+            VALUES (%s,%s,%s,%s,%s,%s,'ACTIVE',%s)
             RETURNING id
-        """, (subject_id, classroom_id, teacher_id, now.date(), now, end_time))
+        """, (subject_id, classroom_id, teacher_id, now.date(), now, end_time, code_secret))
         session_id = cursor.fetchone()['id']
 
         # Same classroom-scoped eligibility rule used by the Teacher flow:

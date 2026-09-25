@@ -164,6 +164,13 @@ public class ApiClient {
      * null if the scanner didn't capture them (older callers still work).
      */
     public void markAttendance(int sessionId, int studentId, String ssid, String bssid, Integer rssi, ApiCallback callback) {
+        markAttendance(sessionId, studentId, ssid, bssid, rssi, null, callback);
+    }
+
+    /**
+     * Sends bssid, rssi, and the rotating anti-proxy code alongside ssid to the backend.
+     */
+    public void markAttendance(int sessionId, int studentId, String ssid, String bssid, Integer rssi, String code, ApiCallback callback) {
         try {
             JSONObject json = new JSONObject();
             json.put("session_id", sessionId);
@@ -177,6 +184,9 @@ public class ApiClient {
             }
             if (rssi != null) {
                 json.put("rssi", rssi.intValue());
+            }
+            if (code != null && !code.isEmpty()) {
+                json.put("code", code);
             }
 
             RequestBody body = RequestBody.create(json.toString(), JSON);

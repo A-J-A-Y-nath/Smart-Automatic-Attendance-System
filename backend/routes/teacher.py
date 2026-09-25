@@ -10,6 +10,8 @@ from middleware.auth import token_required, role_required
 from database.db import get_connection
 import datetime
 from utils.fcm_service import send_multicast_attendance_alert
+from utils.session_code import get_current_code, get_valid_codes, seconds_until_next_rotation
+import secrets
 
 IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
 
@@ -183,16 +185,20 @@ def start_attendance_session():
                 )
                 conn.commit()
 
+        # (folder 08) every new session gets its own random code_secret —
+        # what the rotating anti-proxy attendance code is derived from.
+        code_secret = secrets.token_hex(16)
+
         # Create new session with a 5-minute active window using PostgreSQL clock
         cursor.execute(
             """
             INSERT INTO attendance_sessions 
-                (subject_id, classroom_id, teacher_id, session_date, start_time, end_time, status) 
+                (subject_id, classroom_id, teacher_id, session_date, start_time, end_time, status, code_secret) 
             VALUES 
-                (%s, %s, %s, CURRENT_DATE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '5 minutes', 'ACTIVE') 
+                (%s, %s, %s, CURRENT_DATE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '5 minutes', 'ACTIVE', %s) 
             RETURNING id
             """,
-            (subject_id, classroom_id, teacher_id)
+            (subject_id, classroom_id, teacher_id, code_secret)
         )
         session_id = cursor.fetchone()["id"]
         
@@ -404,6 +410,50 @@ def mark_attendance_manual():
         }), 200
     except Exception as e:
         conn.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@teacher_bp.route("/session-code", methods=["GET"])
+@token_required
+@role_required(["Teacher"])
+def get_session_code():
+    """
+    GET /api/teacher/session-code
+    Returns the CURRENT rotating attendance code for THIS teacher's own
+    active session, plus seconds until it next changes. Polled by the
+    Teacher's screen every few seconds to display a live, expiring code
+    students must enter (see session_code.py for how it's derived).
+    """
+    current_user = g.current_user
+    teacher_id = current_user["user_id"]
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT id, code_secret FROM attendance_sessions WHERE teacher_id = %s AND status = 'ACTIVE' ORDER BY id DESC LIMIT 1",
+            (teacher_id,)
+        )
+        session = cursor.fetchone()
+        if not session:
+            return jsonify({"status": "success", "session_active": False}), 200
+        if not session["code_secret"]:
+            return jsonify({"status": "error", "message": "This session has no security code (started before this feature was added)."}), 400
+
+        code = get_current_code(session["code_secret"])
+        remaining = seconds_until_next_rotation()
+        return jsonify({
+            "status": "success",
+            "session_active": True,
+            "session_id": session["id"],
+            "code": code,
+            "seconds_remaining": remaining,
+            "rotates_every": 15
+        }), 200
+    except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         cursor.close()

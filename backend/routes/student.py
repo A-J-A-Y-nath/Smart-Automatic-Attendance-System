@@ -8,6 +8,7 @@ Provides Flask Blueprint for student operations
 from flask import Blueprint, jsonify, request, g
 from middleware.auth import token_required, role_required
 from database.db import get_connection
+from utils.session_code import get_valid_codes
 import datetime
 
 student_bp = Blueprint("student", __name__, url_prefix="/api/student")
@@ -140,7 +141,7 @@ def mark_attendance():
 
         # 2. Check if requested session is active AND student belongs to that classroom
         sql = """
-            SELECT s.id, s.status, s.classroom_id,
+            SELECT s.id, s.status, s.classroom_id, s.code_secret,
                    c.ssid as target_ssid, c.bssid as target_bssid, c.rssi_threshold
             FROM attendance_sessions s
             JOIN classrooms c ON s.classroom_id = c.id
@@ -160,6 +161,24 @@ def mark_attendance():
         resolved_session_id = active_session["id"]
         target_ssid = (active_session.get("target_ssid") or "").strip()
         target_bssid = (active_session.get("target_bssid") or "").strip()
+
+        # 2a. ANTI-PROXY CODE CHECK (folder 08): student must submit the
+        # current rotating code shown live on the teacher's screen.
+        submitted_code = (data.get("code") or "").strip()
+        session_secret = active_session.get("code_secret")
+        if session_secret:
+            if not submitted_code:
+                return jsonify({
+                    "success": False,
+                    "message": "Enter the attendance code shown on your teacher's screen."
+                }), 200
+            if submitted_code not in get_valid_codes(session_secret):
+                return jsonify({
+                    "success": False,
+                    "message": "Incorrect or expired code. Check your teacher's screen for the current code and try again."
+                }), 200
+        # (sessions created before this feature was added have no
+        # code_secret — those are allowed through without a code.)
 
         # 2b. CLASSROOM MEMBERSHIP CHECK (double verification)
         cursor.execute(

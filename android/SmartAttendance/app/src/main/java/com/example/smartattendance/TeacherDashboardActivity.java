@@ -347,12 +347,19 @@ public class TeacherDashboardActivity extends AppCompatActivity {
         });
     }
 
+    // (folder 08) latest known rotating code + seconds until it changes,
+    // refreshed by fetchSessionCode() below and displayed inside the
+    // timer text so no layout XML changes are needed.
+    private String currentSessionCode = null;
+    private int codeSecondsRemaining = -1;
+
     private void startTimer(int seconds, String subjectName) {
         if (sessionTimer != null) {
             sessionTimer.cancel();
         }
         btnStartSession.setEnabled(false);
         if (btnStopSession != null) btnStopSession.setVisibility(View.VISIBLE);
+        fetchSessionCode(subjectName); // show a code immediately, don't wait for the first tick
 
         sessionTimer = new CountDownTimer(seconds * 1000L, 1000) {
             @Override
@@ -360,11 +367,27 @@ public class TeacherDashboardActivity extends AppCompatActivity {
                 long min = (millisUntilFinished / 1000) / 60;
                 long sec = (millisUntilFinished / 1000) % 60;
                 String timeStr = String.format(Locale.getDefault(), "%02d:%02d", min, sec);
-                tvTimerStatus.setText("SESSION ACTIVE\n" + subjectName + "\nTime Left: " + timeStr);
-                
+
+                String codeLine;
+                if (currentSessionCode != null) {
+                    codeLine = "\n\nATTENDANCE CODE: " + currentSessionCode
+                            + (codeSecondsRemaining >= 0 ? "  (next in " + codeSecondsRemaining + "s)" : "");
+                } else {
+                    codeLine = "\n\nLoading attendance code...";
+                }
+                tvTimerStatus.setText("SESSION ACTIVE\n" + subjectName + "\nTime Left: " + timeStr + codeLine);
+
                 // Fetch live roster every 5 seconds to keep present students list up to date
                 if (sec % 5 == 0) {
                     fetchActiveRoster();
+                }
+                // Refresh the rotating code every 5 seconds too (the code itself
+                // only actually changes every 15s server-side; polling a bit
+                // more often just keeps the on-screen countdown accurate).
+                if (sec % 5 == 0) {
+                    fetchSessionCode(subjectName);
+                } else if (codeSecondsRemaining > 0) {
+                    codeSecondsRemaining--; // smooth local countdown between polls
                 }
             }
 
@@ -375,9 +398,35 @@ public class TeacherDashboardActivity extends AppCompatActivity {
                 btnStartSession.setEnabled(true);
                 spinnerSubject.setEnabled(true);
                 if (btnStopSession != null) btnStopSession.setVisibility(View.GONE);
+                currentSessionCode = null;
+                codeSecondsRemaining = -1;
                 Toast.makeText(TeacherDashboardActivity.this, "Attendance Session EXPIRED for " + subjectName, Toast.LENGTH_LONG).show();
             }
         }.start();
+    }
+
+    /**
+     * NEW (folder 08): fetches the current rotating attendance code for
+     * this teacher's active session and stores it for the timer's onTick
+     * to display. Uses the existing generic adminGet — no ApiClient.java
+     * change needed.
+     */
+    private void fetchSessionCode(String subjectName) {
+        ApiClient.getInstance(this).adminGet("/api/teacher/session-code", new ApiClient.ApiCallback() {
+            @Override
+            public void onSuccess(JSONObject response) {
+                if (response.optBoolean("session_active", false)) {
+                    currentSessionCode = response.optString("code", null);
+                    codeSecondsRemaining = response.optInt("seconds_remaining", -1);
+                }
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                // Non-fatal — the timer will just keep showing the last known
+                // code (or "Loading...") and try again on the next poll.
+            }
+        });
     }
 
     private void stopSession() {

@@ -11,6 +11,7 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.EditText;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
@@ -43,6 +44,7 @@ public class StudentDashboardActivity extends AppCompatActivity {
     private int currentSessionId = -1;
     private String currentTargetSsid = null;
     private String currentTargetBssid = null;
+    private String enteredSessionCode = null;
 
     private CountDownTimer studentTimer;
     private android.content.BroadcastReceiver attendanceUpdateReceiver;
@@ -113,7 +115,7 @@ public class StudentDashboardActivity extends AppCompatActivity {
         //            });
         //        }
 
-        btnScan.setOnClickListener(v -> startScanning());
+        btnScan.setOnClickListener(v -> showCodeEntryDialog());
         btnScan.setText("Mark Attendance");
 
         // Initialize BroadcastReceiver for automatic attendance updates from FCM Service
@@ -323,6 +325,32 @@ public class StudentDashboardActivity extends AppCompatActivity {
             }
         });
     }
+    /**
+     * NEW (folder 08): asks the student for the rotating code shown on the
+     * teacher's screen before starting the beacon scan. The code itself is
+     * validated server-side (student.py) — this dialog just collects it.
+     */
+    private void showCodeEntryDialog() {
+        EditText etCode = new EditText(this);
+        etCode.setHint("4-digit code from teacher's screen");
+        etCode.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Enter Attendance Code")
+            .setMessage("Ask your teacher for the code currently shown on their screen. It changes every 15 seconds.")
+            .setView(etCode)
+            .setPositiveButton("Mark Attendance", (dialog, which) -> {
+                String code = etCode.getText().toString().trim();
+                if (code.isEmpty()) {
+                    Toast.makeText(this, "Enter the code shown on your teacher's screen.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                enteredSessionCode = code;
+                startScanning();
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
 
     private void startScanning() {
         if (currentStudentId == -1) {
@@ -512,7 +540,7 @@ public class StudentDashboardActivity extends AppCompatActivity {
         }
     }
 
-    // Updated to send SSID + BSSID + RSSI
+    // Updated to send SSID + BSSID + RSSI + rotating code
     private void markAttendance(
         String detectedSsid,
         String detectedBssid,
@@ -524,6 +552,7 @@ public class StudentDashboardActivity extends AppCompatActivity {
             detectedSsid,
             detectedBssid,
             detectedRssi,
+            enteredSessionCode,
             new ApiClient.ApiCallback() {
 
                 @Override
