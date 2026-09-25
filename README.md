@@ -94,7 +94,7 @@ Smart-Automatic-Attendance-System/
 │
 ├── database/
 │   ├── schema.sql        # PostgreSQL DDL for all tables
-│   └── migrations/       # Idempotent migration scripts (001, 004_add_device_id_to_attendance.sql)
+│   └── migrations/       # Idempotent migration scripts (001, 004_add_device_id_to_attendance.sql, 005_add_proxy_attendance_attempts.sql)
 │
 ├── esp8266/
 │   └── classroom_beacon/classroom_beacon.ino  # Arduino AP firmware

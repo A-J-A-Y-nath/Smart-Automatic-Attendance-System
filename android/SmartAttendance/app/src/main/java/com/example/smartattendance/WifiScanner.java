@@ -47,12 +47,66 @@ public class WifiScanner {
 
         void onScanFinished();
     }
+    
+    /** Used only by the Teacher "Nearby Wi-Fi" beacon-option picker (folder 11). */
+    public interface NetworkListCallback {
+        void onNetworksFound(List<ScanResult> networks);
+        void onError(String message);
+    }
+
+    private BroadcastReceiver nearbyListReceiver;
 
     public WifiScanner(Context context) {
         this.context = context.getApplicationContext();
 
         this.wifiManager =
                 (WifiManager) this.context.getSystemService(Context.WIFI_SERVICE);
+    }
+
+    /**
+     * Lists currently visible Wi-Fi networks (SSID/BSSID/RSSI), unfiltered,
+     * so a Teacher can pick one as a temporary "Nearby Wi-Fi" attendance
+     * beacon for a single session (folder 11). One-shot foreground action,
+     * separate from the beacon-matching scan used for attendance marking.
+     */
+    public void listVisibleNetworks(final NetworkListCallback callback) {
+        if (wifiManager == null) {
+            callback.onError("Wi-Fi manager unavailable on this device.");
+            return;
+        }
+        if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            callback.onError("Location permission is required to list nearby Wi-Fi networks.");
+            return;
+        }
+
+        if (nearbyListReceiver != null) {
+            try { context.unregisterReceiver(nearbyListReceiver); } catch (Exception ignored) {}
+        }
+
+        nearbyListReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context c, Intent intent) {
+                try { context.unregisterReceiver(this); } catch (Exception ignored) {}
+                nearbyListReceiver = null;
+                try {
+                    List<ScanResult> results = wifiManager.getScanResults();
+                    callback.onNetworksFound(results != null ? results : new java.util.ArrayList<>());
+                } catch (SecurityException e) {
+                    callback.onError("Permission denied reading scan results.");
+                }
+            }
+        };
+        IntentFilter filter = new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
+        context.registerReceiver(nearbyListReceiver, filter);
+
+        boolean started = wifiManager.startScan();
+        if (!started) {
+            try { context.unregisterReceiver(nearbyListReceiver); } catch (Exception ignored) {}
+            nearbyListReceiver = null;
+            List<ScanResult> cached = wifiManager.getScanResults();
+            callback.onNetworksFound(cached != null ? cached : new java.util.ArrayList<>());
+        }
     }
 
     /**

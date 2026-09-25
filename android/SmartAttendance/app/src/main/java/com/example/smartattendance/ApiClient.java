@@ -129,11 +129,25 @@ public class ApiClient {
     }
 
     public void startSession(int classroomId, int subjectId, int teacherId, ApiCallback callback) {
+        startSession(classroomId, subjectId, teacherId, "CLASSROOM", null, null, callback);
+    }
+
+    /**
+     * WHAT: beaconType is "CLASSROOM" (default), "HOTSPOT", or "NEARBY_WIFI".
+     * overrideSsid required for the latter two; overrideBssid optional.
+     * WHY: Beacon Options (folder 11).
+     */
+    public void startSession(int classroomId, int subjectId, int teacherId,
+                              String beaconType, String overrideSsid, String overrideBssid,
+                              ApiCallback callback) {
         try {
             JSONObject json = new JSONObject();
             json.put("classroom_id", classroomId);
             json.put("subject_id", subjectId);
             json.put("teacher_id", teacherId);
+            json.put("beacon_type", beaconType != null ? beaconType : "CLASSROOM");
+            if (overrideSsid != null) json.put("override_ssid", overrideSsid);
+            if (overrideBssid != null) json.put("override_bssid", overrideBssid);
 
             RequestBody body = RequestBody.create(json.toString(), JSON);
             Request request = new Request.Builder()

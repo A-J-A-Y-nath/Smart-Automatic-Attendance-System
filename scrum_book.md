@@ -453,8 +453,9 @@
 4. **Sliding-Window Rate Limiting (`backend/utils/rate_limiter.py`)**:
    * Added thread-safe in-memory sliding-window limiter allowing a maximum of 3 `mark-attendance` calls per 10 seconds per student.
    * Rejects the 4th rapid attempt with `HTTP 429 ("Too many attempts — please wait a few seconds and try again.")`, preventing brute-forcing the 4-digit rotating code.
-5. **Database Migration 004 (`database/migrations/004_add_device_id_to_attendance.sql`)**:
-   * Added `device_id VARCHAR(128)` column and `idx_attendance_records_session_device` index to `attendance_records`.
+5. **Database Migration 004 & 005 (`database/migrations/`)**:
+   * Migration 004: Added `device_id VARCHAR(128)` column and `idx_attendance_records_session_device` index to `attendance_records`.
+   * Migration 005: Created `proxy_attendance_attempts` table logging session, attempted student, original student, device ID, and timestamp.
 
 ### 🧪 Verification & Outcome
 * Verified that Student A marks attendance successfully, logs out, Student B logs in on the same device and is blocked with the device-reuse warning.
@@ -466,6 +467,7 @@
 * [`backend/utils/session_code.py`](file:///e:/Smart-Automatic-Attendance-System/backend/utils/session_code.py)
 * [`backend/utils/rate_limiter.py`](file:///e:/Smart-Automatic-Attendance-System/backend/utils/rate_limiter.py)
 * [`backend/database/migrations/004_add_device_id_to_attendance.sql`](file:///e:/Smart-Automatic-Attendance-System/backend/database/migrations/004_add_device_id_to_attendance.sql)
+* [`backend/database/migrations/005_add_proxy_attendance_attempts.sql`](file:///e:/Smart-Automatic-Attendance-System/backend/database/migrations/005_add_proxy_attendance_attempts.sql)
 * [`backend/routes/student.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/student.py)
 * [`backend/routes/teacher.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/teacher.py)
 * [`StudentDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/StudentDashboardActivity.java)
@@ -484,7 +486,7 @@
 
 | Module | Status | Visual Progress | Highlights / Features |
 | :--- | :--- | :--- | :--- |
-| **Database** | ✅ 100% Complete | `██████████` | **Neon PostgreSQL** serverless cloud DB, 9 tables, FKs, migrations 001-004. |
+| **Database** | ✅ 100% Complete | `██████████` | **Neon PostgreSQL** serverless cloud DB, 10 tables, FKs, migrations 001-005. |
 | **ESP8266 Hardware** | ✅ 100% Complete | `██████████` | AP beacon broadcasting (`MCA_ROOM_101`), mDNS service responder. |
 | **Backend Security** | ✅ 100% Complete | `██████████` | Salted scrypt hashing, JWT tokens, RBAC decorators, rate limiting (HTTP 429). |
 | **Anti-Proxy Protection** | ✅ 100% Complete | `██████████` | One-device-per-session enforcement, 15s rotating codes, real-time teacher proxy alerts. |

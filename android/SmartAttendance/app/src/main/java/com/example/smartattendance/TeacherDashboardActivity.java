@@ -15,6 +15,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -163,7 +164,7 @@ public class TeacherDashboardActivity extends AppCompatActivity {
 //            });
 //        }
 
-        btnStartSession.setOnClickListener(v -> startSession());
+        btnStartSession.setOnClickListener(v -> showBeaconOptionDialog());
         btnStopSession.setOnClickListener(v -> stopSession());
 
         fetchProfile();
@@ -478,8 +479,101 @@ public class TeacherDashboardActivity extends AppCompatActivity {
             }
         });
     }
+    private void showBeaconOptionDialog() {
+        String[] options = {"Classroom Beacon (default)", "Teacher Hotspot", "Nearby Wi-Fi"};
+        new AlertDialog.Builder(this)
+            .setTitle("Attendance Beacon Source")
+            .setItems(options, (dialog, which) -> {
+                if (which == 0) {
+                    startSession("CLASSROOM", null, null);
+                } else if (which == 1) {
+                    showHotspotEntryDialog();
+                } else {
+                    showNearbyWifiPickerDialog();
+                }
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+
+    private void showHotspotEntryDialog() {
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(50, 20, 50, 20);
+
+        TextView info = new TextView(this);
+        info.setText("Turn on your phone's hotspot, then type its exact network name below. This applies to this session only — your classroom's saved beacon is not affected.");
+        info.setPadding(0, 0, 0, 20);
+        EditText etSsid = new EditText(this);
+        etSsid.setHint("Hotspot SSID (exact name)");
+
+        layout.addView(info);
+        layout.addView(etSsid);
+
+        new AlertDialog.Builder(this)
+            .setTitle("Teacher Hotspot")
+            .setView(layout)
+            .setPositiveButton("Start Session", (dialog, which) -> {
+                String ssid = etSsid.getText().toString().trim();
+                if (ssid.isEmpty()) {
+                    Toast.makeText(this, "Hotspot SSID is required.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                startSession("HOTSPOT", ssid, null);
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+
+    private void showNearbyWifiPickerDialog() {
+        Toast.makeText(this, "Scanning nearby Wi-Fi networks…", Toast.LENGTH_SHORT).show();
+        WifiScanner scanner = new WifiScanner(this);
+        scanner.listVisibleNetworks(new WifiScanner.NetworkListCallback() {
+            @Override
+            public void onNetworksFound(List<android.net.wifi.ScanResult> networks) {
+                if (networks == null || networks.isEmpty()) {
+                    Toast.makeText(TeacherDashboardActivity.this, "No nearby networks found. Try Teacher Hotspot instead.", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                java.util.LinkedHashMap<String, android.net.wifi.ScanResult> bestBySsid = new java.util.LinkedHashMap<>();
+                for (android.net.wifi.ScanResult r : networks) {
+                    if (r.SSID == null || r.SSID.trim().isEmpty()) continue;
+                    android.net.wifi.ScanResult existing = bestBySsid.get(r.SSID);
+                    if (existing == null || r.level > existing.level) bestBySsid.put(r.SSID, r);
+                }
+                if (bestBySsid.isEmpty()) {
+                    Toast.makeText(TeacherDashboardActivity.this, "No named networks found nearby.", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                List<android.net.wifi.ScanResult> unique = new ArrayList<>(bestBySsid.values());
+                String[] labels = new String[unique.size()];
+                for (int i = 0; i < unique.size(); i++) {
+                    android.net.wifi.ScanResult r = unique.get(i);
+                    labels[i] = r.SSID + "  (" + r.level + " dBm)";
+                }
+                new AlertDialog.Builder(TeacherDashboardActivity.this)
+                    .setTitle("Select Nearby Wi-Fi Beacon")
+                    .setItems(labels, (dialog, which) -> {
+                        android.net.wifi.ScanResult chosen = unique.get(which);
+                        startSession("NEARBY_WIFI", chosen.SSID, chosen.BSSID);
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
+            }
+
+            @Override
+            public void onError(String message) {
+                Toast.makeText(TeacherDashboardActivity.this, "Scan failed: " + message, Toast.LENGTH_LONG).show();
+            }
+        });
+    }
 
     private void startSession() {
+        startSession("CLASSROOM", null, null);
+    }
+
+    /** NEW (folder 11): beaconType is "CLASSROOM", "HOTSPOT", or "NEARBY_WIFI". */
+    private void startSession(String beaconType, String overrideSsid, String overrideBssid) {
         if (currentTeacherId == -1) {
             Toast.makeText(this, "Profile not loaded yet.", Toast.LENGTH_SHORT).show();
             return;
@@ -502,7 +596,8 @@ public class TeacherDashboardActivity extends AppCompatActivity {
 
         progressBar.setVisibility(View.VISIBLE);
 
-        ApiClient.getInstance(this).startSession(classroomId, subjectId, currentTeacherId, new ApiClient.ApiCallback() {
+        ApiClient.getInstance(this).startSession(classroomId, subjectId, currentTeacherId,
+                beaconType, overrideSsid, overrideBssid, new ApiClient.ApiCallback() {
             @Override
             public void onSuccess(JSONObject response) {
                 progressBar.setVisibility(View.GONE);

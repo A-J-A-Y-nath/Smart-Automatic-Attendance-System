@@ -96,8 +96,8 @@ def get_active_session():
                 sub.subject_code,
                 t.name as teacher_name,
                 c.room_name,
-                c.ssid as target_ssid,
-                c.bssid as target_bssid
+                COALESCE(NULLIF(s.override_ssid, ''), c.ssid) as target_ssid,
+                COALESCE(NULLIF(s.override_bssid, ''), c.bssid) as target_bssid
             FROM attendance_sessions s
             JOIN subjects sub ON s.subject_id = sub.id
             JOIN users t ON s.teacher_id = t.id
@@ -151,7 +151,9 @@ def mark_attendance():
         # 2. Check if requested session is active AND student belongs to that classroom
         sql = """
             SELECT s.id, s.status, s.classroom_id, s.code_secret,
-                   c.ssid as target_ssid, c.bssid as target_bssid, c.rssi_threshold
+                   COALESCE(NULLIF(s.override_ssid, ''), c.ssid) as target_ssid,
+                   COALESCE(NULLIF(s.override_bssid, ''), c.bssid) as target_bssid,
+                   c.rssi_threshold
             FROM attendance_sessions s
             JOIN classrooms c ON s.classroom_id = c.id
             JOIN classroom_students cs ON cs.classroom_id = s.classroom_id AND cs.student_id = %s
