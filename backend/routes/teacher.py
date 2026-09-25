@@ -508,12 +508,32 @@ def get_active_roster():
         for s in students:
             s["attendance_time"] = format_to_ist(s.get("attendance_time"))
 
+        cursor.execute("""
+            SELECT 
+                pa.id,
+                pa.attempt_time,
+                ua.name as attempted_student_name,
+                ua.register_no as attempted_student_reg,
+                uo.name as original_student_name,
+                uo.register_no as original_student_reg
+            FROM proxy_attendance_attempts pa
+            JOIN users ua ON pa.attempted_student_id = ua.id
+            JOIN users uo ON pa.original_student_id = uo.id
+            WHERE pa.session_id = %s
+            ORDER BY pa.attempt_time DESC
+        """, (session_id,))
+        proxy_alerts = cursor.fetchall() or []
+
+        for pa in proxy_alerts:
+            pa["attempt_time"] = format_to_ist(pa.get("attempt_time"))
+
         return jsonify({
             "status": "success",
             "session_active": True,
             "session_id": session_id,
             "present_count": len(students),
-            "students": students
+            "students": students,
+            "proxy_alerts": proxy_alerts
         }), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500

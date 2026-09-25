@@ -171,6 +171,15 @@ public class ApiClient {
      * Sends bssid, rssi, and the rotating anti-proxy code alongside ssid to the backend.
      */
     public void markAttendance(int sessionId, int studentId, String ssid, String bssid, Integer rssi, String code, ApiCallback callback) {
+        markAttendance(sessionId, studentId, ssid, bssid, rssi, code, null, callback);
+    }
+
+    /**
+     * WHAT: adds deviceId (folder 09) to the request.
+     * WHY: backend enforces "one device can only mark ONE student present
+     * per session" — see student.py mark-attendance.
+     */
+    public void markAttendance(int sessionId, int studentId, String ssid, String bssid, Integer rssi, String code, String deviceId, ApiCallback callback) {
         try {
             JSONObject json = new JSONObject();
             json.put("session_id", sessionId);
@@ -187,6 +196,9 @@ public class ApiClient {
             }
             if (code != null && !code.isEmpty()) {
                 json.put("code", code);
+            }
+            if (deviceId != null && !deviceId.isEmpty()) {
+                json.put("device_id", deviceId);
             }
 
             RequestBody body = RequestBody.create(json.toString(), JSON);

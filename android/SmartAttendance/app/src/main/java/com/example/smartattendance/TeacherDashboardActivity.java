@@ -522,20 +522,40 @@ public class TeacherDashboardActivity extends AppCompatActivity {
                     }
 
                     JSONArray students = response.optJSONArray("students");
-                    if (students == null || students.length() == 0) {
-                        tvRosterList.setText("No students have marked attendance yet.");
-                        return;
-                    }
+                    JSONArray proxyAlerts = response.optJSONArray("proxy_alerts");
 
                     StringBuilder sb = new StringBuilder();
-                    for (int i = 0; i < students.length(); i++) {
-                        JSONObject s = students.getJSONObject(i);
-                        String sName = s.optString("student_name", "Student");
-                        String regNo = s.optString("register_no", "");
-                        String time = s.optString("attendance_time", "");
-                        sb.append(i + 1).append(". ").append(sName)
-                          .append(" (").append(regNo.isEmpty() ? "N/A" : regNo).append(")")
-                          .append("  •  ").append(time).append("\n");
+
+                    if (proxyAlerts != null && proxyAlerts.length() > 0) {
+                        sb.append("⚠️ PROXY ATTEMPTS (Same Phone / Multiple Accounts):\n");
+                        for (int j = 0; j < proxyAlerts.length(); j++) {
+                            JSONObject a = proxyAlerts.getJSONObject(j);
+                            String attemptedName = a.optString("attempted_student_name", "Student");
+                            String attemptedReg = a.optString("attempted_student_reg", "N/A");
+                            String origName = a.optString("original_student_name", "Student");
+                            String origReg = a.optString("original_student_reg", "N/A");
+                            String aTime = a.optString("attempt_time", "");
+                            sb.append("🚫 ").append(attemptedName).append(" (").append(attemptedReg).append(")")
+                              .append(" tried to mark using device of ")
+                              .append(origName).append(" (").append(origReg).append(")")
+                              .append(" at ").append(aTime).append("\n");
+                        }
+                        sb.append("────────────────────────\n");
+                    }
+
+                    if (students == null || students.length() == 0) {
+                        sb.append("No students have marked attendance yet.");
+                    } else {
+                        sb.append("Present Students:\n");
+                        for (int i = 0; i < students.length(); i++) {
+                            JSONObject s = students.getJSONObject(i);
+                            String sName = s.optString("student_name", "Student");
+                            String regNo = s.optString("register_no", "");
+                            String time = s.optString("attendance_time", "");
+                            sb.append(i + 1).append(". ").append(sName)
+                              .append(" (").append(regNo.isEmpty() ? "N/A" : regNo).append(")")
+                              .append("  •  ").append(time).append("\n");
+                        }
                     }
                     tvRosterList.setText(sb.toString().trim());
 

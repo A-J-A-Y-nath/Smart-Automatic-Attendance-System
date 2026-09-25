@@ -9,6 +9,7 @@ from flask import Blueprint, jsonify, request, g
 from middleware.auth import token_required, role_required
 from database.db import get_connection
 from utils.session_code import get_valid_codes
+from utils.rate_limiter import is_rate_limited
 import datetime
 
 student_bp = Blueprint("student", __name__, url_prefix="/api/student")
@@ -139,6 +140,14 @@ def mark_attendance():
         )
         conn.commit()
 
+        # 2a. RATE LIMITING (folder 09): reject if this student has already
+        # hit mark-attendance too many times in the last few seconds.
+        if is_rate_limited(student_id):
+            return jsonify({
+                "success": False,
+                "message": "Too many attempts — please wait a few seconds and try again."
+            }), 429
+
         # 2. Check if requested session is active AND student belongs to that classroom
         sql = """
             SELECT s.id, s.status, s.classroom_id, s.code_secret,
@@ -189,6 +198,45 @@ def mark_attendance():
             return jsonify({
                 "success": False,
                 "message": "You are not enrolled in the classroom running this session. Attendance denied."
+            }), 200
+
+        # 2c. ONE-DEVICE-PER-SESSION: within this session, the
+        # same physical device can only ever be the device that successfully
+        # marks ONE student present.
+        device_id = (data.get("device_id") or "").strip()
+        if not device_id:
+            return jsonify({
+                "success": False,
+                "message": "Device identification is required to mark attendance."
+            }), 200
+
+        cursor.execute(
+            """
+            SELECT ar.student_id, u.name as original_student_name, u.register_no as original_student_reg
+            FROM attendance_records ar
+            JOIN users u ON ar.student_id = u.id
+            WHERE ar.session_id = %s AND ar.device_id = %s AND ar.student_id != %s AND ar.status = 'PRESENT'
+            LIMIT 1
+            """,
+            (resolved_session_id, device_id, student_id)
+        )
+        other = cursor.fetchone()
+        if other:
+            try:
+                cursor.execute(
+                    """
+                    INSERT INTO proxy_attendance_attempts (session_id, attempted_student_id, original_student_id, device_id, attempt_time)
+                    VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+                    """,
+                    (resolved_session_id, student_id, other["student_id"], device_id)
+                )
+                conn.commit()
+            except Exception:
+                conn.rollback()
+
+            return jsonify({
+                "success": False,
+                "message": "You can't mark attendance. This device has already been used by another student for this session."
             }), 200
 
         # 3. Beacon Verification
@@ -255,12 +303,12 @@ def mark_attendance():
 
         cursor.execute(
             """
-            INSERT INTO attendance_records (session_id, student_id, status, method, bssid, attendance_time)
-            VALUES (%s, %s, 'PRESENT', 'AUTOMATIC', %s, CURRENT_TIMESTAMP)
+            INSERT INTO attendance_records (session_id, student_id, status, method, bssid, device_id, attendance_time)
+            VALUES (%s, %s, 'PRESENT', 'AUTOMATIC', %s, %s, CURRENT_TIMESTAMP)
             ON CONFLICT (session_id, student_id)
-            DO UPDATE SET status = 'PRESENT', method = 'AUTOMATIC', marked_by = NULL, bssid = %s, attendance_time = CURRENT_TIMESTAMP
+            DO UPDATE SET status = 'PRESENT', method = 'AUTOMATIC', marked_by = NULL, bssid = %s, device_id = %s, attendance_time = CURRENT_TIMESTAMP
             """,
-            (resolved_session_id, student_id, detected_bssid or None, detected_bssid or None)
+            (resolved_session_id, student_id, detected_bssid or None, device_id or None, detected_bssid or None, device_id or None)
         )
         conn.commit()
         return jsonify({

@@ -15,6 +15,7 @@ import android.widget.EditText;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
+import android.annotation.SuppressLint;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -540,12 +541,34 @@ public class StudentDashboardActivity extends AppCompatActivity {
         }
     }
 
-    // Updated to send SSID + BSSID + RSSI + rotating code
+    @SuppressLint("HardwareIds")
+    private String getUniqueDeviceId() {
+        String deviceId = null;
+        try {
+            deviceId = android.provider.Settings.Secure.getString(
+                    getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
+        } catch (Exception ignored) {}
+
+        if (deviceId == null || deviceId.trim().isEmpty() || "9774d56d682e549c".equals(deviceId)) {
+            android.content.SharedPreferences devicePrefs =
+                    getSharedPreferences("AppDeviceIdentity", Context.MODE_PRIVATE);
+            deviceId = devicePrefs.getString("device_id", null);
+            if (deviceId == null || deviceId.trim().isEmpty()) {
+                deviceId = "dev_" + java.util.UUID.randomUUID().toString();
+                devicePrefs.edit().putString("device_id", deviceId).apply();
+            }
+        }
+        return deviceId;
+    }
+
+    // Updated to send SSID + BSSID + RSSI + rotating code + device ID
     private void markAttendance(
         String detectedSsid,
         String detectedBssid,
         int detectedRssi
     ) {
+        String deviceId = getUniqueDeviceId();
+
         ApiClient.getInstance(this).markAttendance(
             currentSessionId,
             currentStudentId,
@@ -553,6 +576,7 @@ public class StudentDashboardActivity extends AppCompatActivity {
             detectedBssid,
             detectedRssi,
             enteredSessionCode,
+            deviceId,
             new ApiClient.ApiCallback() {
 
                 @Override
@@ -573,7 +597,7 @@ public class StudentDashboardActivity extends AppCompatActivity {
                         );
 
                     if (!success) {
-                        tvStatus.setText("No Active Session");
+                        tvStatus.setText(msg);
 
                         Toast.makeText(
                             StudentDashboardActivity.this,
