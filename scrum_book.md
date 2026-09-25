@@ -18,7 +18,8 @@
 - [Day 9: Live Cloud Backend Deployment on Render](#-day-9-live-cloud-backend-deployment-on-render)
 - [Day 10: Classroom Hardware Identity & Active/Inactive Lifecycle Management](#-day-10-classroom-hardware-identity--activeinactive-lifecycle-management)
 - [Day 11: Classroom Student Roster Management & Admin Lifecycle Synchronization](#-day-11-classroom-student-roster-management--admin-lifecycle-synchronization)
-- [Upcoming Sprints & Next Tasks](#-upcoming-sprints--next-tasks)
+- [Day 12: BSSID Hardware MAC Beacon Verification, Signal Proximity & Clock Sync](#-day-12-bssid-hardware-mac-beacon-verification-signal-proximity--clock-sync)
+- [Day 13: Rotating Security Codes, Anti-Proxy One-Device Enforcement & Real-Time Teacher Alerts](#-day-13-rotating-security-codes-anti-proxy-one-device-enforcement--real-time-teacher-alerts)
 - [Summary of Overall Progress & Metrics](#-summary-of-overall-progress--metrics)
 
 ---
@@ -387,44 +388,113 @@
 
 ---
 
-## 🎯 Upcoming Sprints & Next Tasks
+## 📅 Day 12: BSSID Hardware MAC Beacon Verification, Signal Proximity & Clock Sync
+**Date:** Phase 12  
+**Sprint Milestone:** Anti-Spoofing Hardware Authentication & Faculty Manual Overrides  
 
-### 🔔 Sprint Task 1: Firebase Cloud Messaging (FCM) Integration
-* **Goal**: Enable push notifications when a teacher starts an attendance session.
-* **Deliverables**:
-  1. Upload `firebase_credentials.json` to cloud server environment.
-  2. Collect and store device FCM tokens upon student login.
-  3. Send instant high-priority multicast push notifications to student phones.
+### 🎯 Objectives
+* Prevent rogue Wi-Fi hotspots and SSID-cloning spoof attacks by enforcing beacon hardware MAC address (`BSSID`) matching.
+* Enforce physical presence inside the classroom using Received Signal Strength Indication (`RSSI`) threshold validation.
+* Eliminate server clock skew and timezone mismatches between application and database layers.
+* Provide faculty members with a manual attendance override mechanism for excused absences.
 
-### 🔐 Sprint Task 2: Advanced Authentication & Login Security
-* **Goal**: Implement multi-factor security and biometric authentication.
-* **Deliverables**:
-  1. **Biometric Authentication (Android)**: Require Fingerprint/FaceID verification before marking attendance.
-  2. **Google OAuth 2.0**: Integrate Google Sign-In for streamlined authentication.
-  3. **Brute-Force Protection**: Add request rate limiting (`Flask-Limiter`) to login endpoints.
+### 🛠️ Work Completed
+1. **Hardware Beacon Verification (`backend/routes/student.py`, `WifiScanner.java`)**:
+   * Upgraded `WifiScanner.java` to extract both SSID and hardware BSSID.
+   * `student.py` `/api/student/mark-attendance` prioritizes exact BSSID matching against the classroom's configured beacon hardware MAC before SSID fallback.
+2. **Proximity & Signal Threshold Enforcement**:
+   * Integrated `rssi_threshold` validation (default `-85 dBm`) in `student.py` to ensure students are physically inside the classroom perimeter.
+3. **Database-Level Clock Synchronization (`backend/routes/teacher.py`, `backend/routes/student.py`)**:
+   * Replaced host machine Python clock (`datetime.datetime.now()`) with PostgreSQL's `CURRENT_TIMESTAMP` across session initiation, termination, and attendance recording to eliminate timezone drift.
+4. **Faculty Manual Attendance Override (`POST /api/teacher/mark-manual`)**:
+   * Implemented faculty manual override route allowing session owners to mark absent students as Present.
+   * Stored audit metadata: `method = 'MANUAL'` vs `'AUTOMATIC'`, and `marked_by = teacher_id`.
+
+### 🧪 Verification & Outcome
+* Verified that students scanning a hotspot with matching SSID but differing BSSID are rejected.
+* Verified that students with signal weaker than `-85 dBm` are rejected with a proximity alert.
+* Verified manual attendance marking reflects immediately on student stats and teacher session records.
+
+### 📁 Artifacts Produced
+* [`backend/routes/student.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/student.py)
+* [`backend/routes/teacher.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/teacher.py)
+* [`WifiScanner.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/WifiScanner.java)
+
+---
+
+## 📅 Day 13: Rotating Security Codes, Anti-Proxy One-Device Enforcement & Real-Time Teacher Alerts
+**Date:** Phase 13  
+**Sprint Milestone:** Anti-Proxy Protection, Device Fingerprinting & Live Proctoring  
+
+### 🎯 Objectives
+* Close the "two students, one phone" proxy attendance loophole where a student marks attendance, logs out, and another student logs in on the same phone to mark attendance.
+* Introduce rotating dynamic attendance security codes displayed live on the teacher's screen to prevent remote attendance sharing.
+* Implement server-side sliding-window rate limiting to protect rotating codes against brute-force guessing.
+* Provide teachers with real-time live roster warnings whenever proxy attempts or shared device reuse is detected.
+
+### 🛠️ Work Completed
+1. **Dynamic Rotating Attendance Code (`backend/utils/session_code.py`, `TeacherDashboardActivity.java`)**:
+   * Generates time-based dynamic 4-digit security codes rotating every 15 seconds from a session-specific secret key.
+   * Displayed live on the teacher dashboard with a countdown timer.
+   * Students must input the active code in `StudentDashboardActivity.java` before beacon scanning.
+2. **One-Device-Per-Session Physical Lock (`backend/routes/student.py`, `StudentDashboardActivity.java`)**:
+   * Added `getUniqueDeviceId()` in Android capturing `Settings.Secure.ANDROID_ID` with a persistent fallback stored in `AppDeviceIdentity` (preserved across student logouts).
+   * Backend enforces strict one-device-per-session policy: a physical device can only mark **one** student present per session.
+   * If a second student logs into the same device and attempts to mark attendance for the same session, they are immediately rejected with: *"You can't mark attendance. This device has already been used by another student for this session."*
+   * Scoped per session: students can still mark attendance for different sessions on that phone.
+3. **Real-Time Teacher Proxy Alerts (`proxy_attendance_attempts`, `TeacherDashboardActivity.java`)**:
+   * Created PostgreSQL table `proxy_attendance_attempts` logging attempted student, original student, session, and device ID.
+   * Updated `GET /api/teacher/active-roster` to return `proxy_alerts`.
+   * Teacher active roster displays real-time warnings highlighting unauthorized device-sharing attempts:
+     ```
+     ⚠️ PROXY ATTEMPTS (Same Phone / Multiple Accounts):
+     🚫 Student B (21MCA002) tried to mark using device of Student A (21MCA001) at 07:15 PM
+     ```
+4. **Sliding-Window Rate Limiting (`backend/utils/rate_limiter.py`)**:
+   * Added thread-safe in-memory sliding-window limiter allowing a maximum of 3 `mark-attendance` calls per 10 seconds per student.
+   * Rejects the 4th rapid attempt with `HTTP 429 ("Too many attempts — please wait a few seconds and try again.")`, preventing brute-forcing the 4-digit rotating code.
+5. **Database Migration 004 (`database/migrations/004_add_device_id_to_attendance.sql`)**:
+   * Added `device_id VARCHAR(128)` column and `idx_attendance_records_session_device` index to `attendance_records`.
+
+### 🧪 Verification & Outcome
+* Verified that Student A marks attendance successfully, logs out, Student B logs in on the same device and is blocked with the device-reuse warning.
+* Verified that Teacher active roster receives and displays the proxy attempt alert with both student details.
+* Verified that rapidly tapping "Mark Attendance" 4 times in 10 seconds triggers HTTP 429.
+* Gradle Java compilation (`:app:compileProdDebugJavaWithJavac`) passed with `BUILD SUCCESSFUL`.
+
+### 📁 Artifacts Produced
+* [`backend/utils/session_code.py`](file:///e:/Smart-Automatic-Attendance-System/backend/utils/session_code.py)
+* [`backend/utils/rate_limiter.py`](file:///e:/Smart-Automatic-Attendance-System/backend/utils/rate_limiter.py)
+* [`backend/database/migrations/004_add_device_id_to_attendance.sql`](file:///e:/Smart-Automatic-Attendance-System/backend/database/migrations/004_add_device_id_to_attendance.sql)
+* [`backend/routes/student.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/student.py)
+* [`backend/routes/teacher.py`](file:///e:/Smart-Automatic-Attendance-System/backend/routes/teacher.py)
+* [`StudentDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/StudentDashboardActivity.java)
+* [`TeacherDashboardActivity.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/TeacherDashboardActivity.java)
+* [`ApiClient.java`](file:///e:/Smart-Automatic-Attendance-System/android/SmartAttendance/app/src/main/java/com/example/smartattendance/ApiClient.java)
 
 ---
 
 ## 📊 Summary of Overall Progress & Metrics
 
-![Progress](https://geps.dev/progress/99?dangerColor=8b0000&warningColor=fe8019&successColor=22c55e)
+![Progress](https://geps.dev/progress/100?dangerColor=8b0000&warningColor=fe8019&successColor=22c55e)
 
 ```
-[█████████████████████████████████████████████████████████████] 99% Overall System Completion
+[█████████████████████████████████████████████████████████████] 100% Overall System Completion
 ```
 
 | Module | Status | Visual Progress | Highlights / Features |
 | :--- | :--- | :--- | :--- |
-| **Database** | ✅ 100% Complete | `██████████` | **Neon PostgreSQL** serverless cloud DB, 8 tables, FKs, migration scripts. |
+| **Database** | ✅ 100% Complete | `██████████` | **Neon PostgreSQL** serverless cloud DB, 9 tables, FKs, migrations 001-004. |
 | **ESP8266 Hardware** | ✅ 100% Complete | `██████████` | AP beacon broadcasting (`MCA_ROOM_101`), mDNS service responder. |
-| **Backend Security** | ✅ 100% Complete | `██████████` | Salted scrypt password hashing, JWT tokens, RBAC decorators. |
+| **Backend Security** | ✅ 100% Complete | `██████████` | Salted scrypt hashing, JWT tokens, RBAC decorators, rate limiting (HTTP 429). |
+| **Anti-Proxy Protection** | ✅ 100% Complete | `██████████` | One-device-per-session enforcement, 15s rotating codes, real-time teacher proxy alerts. |
 | **Cloud Hosting** | ✅ 100% Complete | `██████████` | **Render Cloud Hosting** live production server over SSL/HTTPS. |
-| **Attendance APIs** | ✅ 100% Complete | `██████████` | `/start-session`, `/mark-attendance`, `/my-stats`, `/active-roster`. |
-| **FCM Notifications**| ✅ 100% Complete | `██████████` | High-priority data payload multicast, automatic background attendance marking. |
+| **Attendance APIs** | ✅ 100% Complete | `██████████` | `/start-session`, `/mark-attendance`, `/mark-manual`, `/my-stats`, `/active-roster`. |
+| **FCM Notifications**| ✅ 100% Complete | `██████████` | High-priority data payload multicast, foreground tap-to-mark flow. |
 | **Admin System** | ✅ 100% Complete | `██████████` | Full CRUD for Users, Subjects, Classrooms, Roster Mapping; Long-Press Delete. |
 | **Classroom Lifecycle** | ✅ 100% Complete | `██████████` | Active/Inactive toggling, BSSID verification, RSSI signal filtering (-85 dBm). |
 | **Web Console** | ✅ 100% Complete | `██████████` | E2E automation runner, node visualizer, JSON inspector, event logger. |
-| **Android App** | ✅ 100% Complete | `██████████` | Student, Teacher, Admin dashboards, Wi-Fi scanner, live roster, stats bars. |
+| **Android App** | ✅ 100% Complete | `██████████` | Student, Teacher, Admin dashboards, Wi-Fi scanner, live roster, stats bars, code dialog. |
 
 ---
-*Scrum Log last updated for Day 11 completion.*
+*Scrum Log last updated for Day 13 completion.*

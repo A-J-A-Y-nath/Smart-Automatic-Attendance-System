@@ -508,24 +508,24 @@ def get_active_roster():
         for s in students:
             s["attendance_time"] = format_to_ist(s.get("attendance_time"))
 
-        cursor.execute("""
-            SELECT 
-                pa.id,
-                pa.attempt_time,
-                ua.name as attempted_student_name,
-                ua.register_no as attempted_student_reg,
-                uo.name as original_student_name,
-                uo.register_no as original_student_reg
-            FROM proxy_attendance_attempts pa
-            JOIN users ua ON pa.attempted_student_id = ua.id
-            JOIN users uo ON pa.original_student_id = uo.id
-            WHERE pa.session_id = %s
-            ORDER BY pa.attempt_time DESC
-        """, (session_id,))
-        proxy_alerts = cursor.fetchall() or []
-
-        for pa in proxy_alerts:
-            pa["attempt_time"] = format_to_ist(pa.get("attempt_time"))
+        proxy_alerts = []
+        try:
+            cursor.execute("""
+                SELECT u1.name as attempted_name, u1.register_no as attempted_reg,
+                       u2.name as original_name, u2.register_no as original_reg,
+                       pa.attempt_time
+                FROM proxy_attendance_attempts pa
+                JOIN users u1 ON pa.attempted_student_id = u1.id
+                JOIN users u2 ON pa.original_student_id = u2.id
+                WHERE pa.session_id = %s
+                ORDER BY pa.attempt_time DESC
+            """, (session_id,))
+            proxy_rows = cursor.fetchall()
+            for pr in proxy_rows:
+                pr["attempt_time"] = format_to_ist(pr.get("attempt_time"))
+                proxy_alerts.append(pr)
+        except Exception:
+            proxy_alerts = []
 
         return jsonify({
             "status": "success",
@@ -535,6 +535,143 @@ def get_active_roster():
             "students": students,
             "proxy_alerts": proxy_alerts
         }), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@teacher_bp.route("/active-roster-full", methods=["GET"])
+@token_required
+@role_required(["Teacher"])
+def get_active_roster_full():
+    """
+    GET /api/teacher/active-roster-full
+    Like /api/teacher/active-roster, but returns EVERY student who
+    belongs to the active session's classroom (Present AND Absent).
+    Powers the Manual Attendance UI.
+    """
+    current_user = g.current_user
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "UPDATE attendance_sessions SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND end_time IS NOT NULL AND end_time <= CURRENT_TIMESTAMP"
+        )
+        conn.commit()
+
+        cursor.execute(
+            "SELECT id, classroom_id FROM attendance_sessions WHERE teacher_id = %s AND status = 'ACTIVE' ORDER BY id DESC LIMIT 1",
+            (current_user["user_id"],)
+        )
+        session = cursor.fetchone()
+        if not session:
+            return jsonify({"status": "success", "session_active": False, "students": []}), 200
+
+        session_id = session["id"]
+        cursor.execute("""
+            SELECT u.id as student_id, u.name as student_name, u.register_no,
+                   COALESCE(ar.status, 'ABSENT') as status,
+                   ar.method,
+                   ar.attendance_time
+            FROM classroom_students cst
+            JOIN users u ON u.id = cst.student_id
+            LEFT JOIN attendance_records ar ON ar.session_id = %s AND ar.student_id = u.id
+            WHERE cst.classroom_id = %s
+            ORDER BY status ASC, u.name ASC
+        """, (session_id, session["classroom_id"]))
+        students = cursor.fetchall()
+        for st in students:
+            st["attendance_time"] = format_to_ist(st.get("attendance_time"))
+
+        proxy_alerts = []
+        try:
+            cursor.execute("""
+                SELECT u1.name as attempted_name, u1.register_no as attempted_reg,
+                       u2.name as original_name, u2.register_no as original_reg,
+                       pa.attempt_time
+                FROM proxy_attendance_attempts pa
+                JOIN users u1 ON pa.attempted_student_id = u1.id
+                JOIN users u2 ON pa.original_student_id = u2.id
+                WHERE pa.session_id = %s
+                ORDER BY pa.attempt_time DESC
+            """, (session_id,))
+            proxy_rows = cursor.fetchall()
+            for pr in proxy_rows:
+                pr["attempt_time"] = format_to_ist(pr.get("attempt_time"))
+                proxy_alerts.append(pr)
+        except Exception:
+            proxy_alerts = []
+
+        return jsonify({
+            "status": "success",
+            "session_active": True,
+            "session_id": session_id,
+            "students": students,
+            "proxy_alerts": proxy_alerts
+        }), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@teacher_bp.route("/history", methods=["GET"])
+@token_required
+@role_required(["Teacher"])
+def get_history_filtered():
+    """
+    GET /api/teacher/history — attendance history for THIS teacher's own
+    sessions, filterable by ?classroom_id= ?subject_id= ?date=YYYY-MM-DD
+    ?search=<student name or register_no>
+    """
+    current_user = g.current_user
+    teacher_id = current_user["user_id"]
+
+    classroom_id = request.args.get("classroom_id", type=int)
+    subject_id = request.args.get("subject_id", type=int)
+    date_str = request.args.get("date")
+    search = request.args.get("search", "").strip()
+
+    where = ["s.teacher_id = %s"]
+    params = [teacher_id]
+
+    if classroom_id:
+        where.append("s.classroom_id = %s")
+        params.append(classroom_id)
+    if subject_id:
+        where.append("s.subject_id = %s")
+        params.append(subject_id)
+    if date_str:
+        where.append("s.session_date = %s")
+        params.append(date_str)
+    if search:
+        where.append("(u.name ILIKE %s OR u.register_no ILIKE %s)")
+        params.extend([f"%{search}%", f"%{search}%"])
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(f"""
+            SELECT ar.id, ar.status, ar.method, ar.attendance_time,
+                   mb.name as marked_by_name,
+                   u.name as student_name, u.register_no,
+                   sub.subject_name, sub.subject_code,
+                   c.room_name, s.session_date, s.id as session_id
+            FROM attendance_records ar
+            JOIN attendance_sessions s ON ar.session_id = s.id
+            JOIN users u ON ar.student_id = u.id
+            JOIN subjects sub ON s.subject_id = sub.id
+            JOIN classrooms c ON s.classroom_id = c.id
+            LEFT JOIN users mb ON ar.marked_by = mb.id
+            WHERE {' AND '.join(where)}
+            ORDER BY s.session_date DESC, ar.attendance_time DESC NULLS LAST
+            LIMIT 300
+        """, params)
+        records = cursor.fetchall()
+        return jsonify({"status": "success", "records": records, "count": len(records)}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:

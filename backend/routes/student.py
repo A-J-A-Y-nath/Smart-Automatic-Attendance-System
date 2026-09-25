@@ -51,7 +51,7 @@ def get_student_history():
             JOIN subjects sub ON s.subject_id = sub.id
             JOIN classrooms c ON s.classroom_id = c.id
             WHERE ar.student_id = %s
-            ORDER BY ar.attendance_time DESC
+            ORDER BY s.session_date DESC, ar.attendance_time DESC NULLS LAST
         """
         cursor.execute(sql, (current_user["user_id"],))
         records = cursor.fetchall()
@@ -200,44 +200,41 @@ def mark_attendance():
                 "message": "You are not enrolled in the classroom running this session. Attendance denied."
             }), 200
 
-        # 2c. ONE-DEVICE-PER-SESSION: within this session, the
+        # 2c. ONE-DEVICE-PER-SESSION (folder 09): within this session, the
         # same physical device can only ever be the device that successfully
         # marks ONE student present.
         device_id = (data.get("device_id") or "").strip()
-        if not device_id:
-            return jsonify({
-                "success": False,
-                "message": "Device identification is required to mark attendance."
-            }), 200
+        if device_id:
+            cursor.execute(
+                "SELECT student_id FROM attendance_records WHERE session_id = %s AND device_id = %s AND student_id != %s",
+                (resolved_session_id, device_id, student_id)
+            )
+            other = cursor.fetchone()
+            if other:
+                try:
+                    cursor.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS proxy_attendance_attempts (
+                            id SERIAL PRIMARY KEY,
+                            session_id INT NOT NULL REFERENCES attendance_sessions(id) ON DELETE CASCADE,
+                            attempted_student_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                            original_student_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                            device_id VARCHAR(128),
+                            attempt_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        );
+                        INSERT INTO proxy_attendance_attempts (session_id, attempted_student_id, original_student_id, device_id)
+                        VALUES (%s, %s, %s, %s);
+                        """,
+                        (resolved_session_id, student_id, other["student_id"], device_id)
+                    )
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
 
-        cursor.execute(
-            """
-            SELECT ar.student_id, u.name as original_student_name, u.register_no as original_student_reg
-            FROM attendance_records ar
-            JOIN users u ON ar.student_id = u.id
-            WHERE ar.session_id = %s AND ar.device_id = %s AND ar.student_id != %s AND ar.status = 'PRESENT'
-            LIMIT 1
-            """,
-            (resolved_session_id, device_id, student_id)
-        )
-        other = cursor.fetchone()
-        if other:
-            try:
-                cursor.execute(
-                    """
-                    INSERT INTO proxy_attendance_attempts (session_id, attempted_student_id, original_student_id, device_id, attempt_time)
-                    VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
-                    """,
-                    (resolved_session_id, student_id, other["student_id"], device_id)
-                )
-                conn.commit()
-            except Exception:
-                conn.rollback()
-
-            return jsonify({
-                "success": False,
-                "message": "You can't mark attendance. This device has already been used by another student for this session."
-            }), 200
+                return jsonify({
+                    "success": False,
+                    "message": "This device has already been used to mark a different student present for this session."
+                }), 200
 
         # 3. Beacon Verification
         detected_ssid = (data.get("ssid") or data.get("beacon_ssid") or "").strip()

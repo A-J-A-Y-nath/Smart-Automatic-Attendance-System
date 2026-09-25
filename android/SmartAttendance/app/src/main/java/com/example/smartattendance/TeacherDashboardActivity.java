@@ -1,18 +1,22 @@
 package com.example.smartattendance;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -102,6 +106,15 @@ public class TeacherDashboardActivity extends AppCompatActivity {
         btnRefresh = findViewById(R.id.btnRefresh);
         progressBar = findViewById(R.id.progressBar);
 
+        TextView tvRosterListForClick = findViewById(R.id.tvRosterList);
+        if (tvRosterListForClick != null) {
+            tvRosterListForClick.setOnClickListener(v -> showManualAttendanceDialog());
+        }
+        TextView tvHistoryListForClick = findViewById(R.id.tvHistoryList);
+        if (tvHistoryListForClick != null) {
+            tvHistoryListForClick.setOnClickListener(v -> showHistoryFilterDialog());
+        }
+
         btnLogout.setOnClickListener(v -> {
             if (sessionTimer != null) sessionTimer.cancel();
             prefsHelper.clearData();
@@ -162,8 +175,20 @@ public class TeacherDashboardActivity extends AppCompatActivity {
         super.onResume();
         // Only refresh if subjects are already loaded (not first load — fetchProfile handles that)
         if (!subjectList.isEmpty()) {
-            checkActiveSession();
+            checkActiveSession(); // re-syncs and restarts the timer/polling if a session is still active
             fetchActiveRoster();
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Stop the countdown timer (and, with it, the roster/code polling
+        // added in folders 08/10) while this screen isn't visible.
+        // onResume() above calls checkActiveSession(), which restarts it
+        // in sync with the server the moment the screen is visible again.
+        if (sessionTimer != null) {
+            sessionTimer.cancel();
         }
     }
 
@@ -503,60 +528,89 @@ public class TeacherDashboardActivity extends AppCompatActivity {
         });
     }
 
+    // (folder 10) remembers the last roster fetch so the Manual Attendance
+    // dialog doesn't need its own network round-trip to know who's absent.
+    private int lastRosterSessionId = -1;
+    private final List<JSONObject> lastAbsentStudents = new ArrayList<>();
+
     private void fetchActiveRoster() {
         TextView tvPresentBadge = findViewById(R.id.tvPresentBadge);
         TextView tvRosterList = findViewById(R.id.tvRosterList);
         if (tvRosterList == null) return;
 
-        ApiClient.getInstance(this).adminGet("/api/teacher/active-roster", new ApiClient.ApiCallback() {
+        // WHAT CHANGED: switched from /active-roster (Present-only) to
+        // /active-roster-full (Present AND Absent), so this screen can
+        // show and act on who's still absent — that's what
+        // showManualAttendanceDialog() below uses.
+        ApiClient.getInstance(this).adminGet("/api/teacher/active-roster-full", new ApiClient.ApiCallback() {
             @Override
             public void onSuccess(JSONObject response) {
                 try {
                     boolean active = response.optBoolean("session_active", false);
-                    int count = response.optInt("present_count", 0);
-                    if (tvPresentBadge != null) tvPresentBadge.setText("Count: " + count);
+                    lastAbsentStudents.clear();
 
                     if (!active) {
+                        lastRosterSessionId = -1;
+                        if (tvPresentBadge != null) tvPresentBadge.setText("Count: 0");
                         tvRosterList.setText("No active session to display live roster.");
                         return;
                     }
 
+                    lastRosterSessionId = response.optInt("session_id", -1);
                     JSONArray students = response.optJSONArray("students");
-                    JSONArray proxyAlerts = response.optJSONArray("proxy_alerts");
+                    if (students == null || students.length() == 0) {
+                        if (tvPresentBadge != null) tvPresentBadge.setText("Count: 0");
+                        tvRosterList.setText("No students are associated with this classroom yet.\n(Ask Admin to assign students under Manage Students.)");
+                        return;
+                    }
 
+                    int presentCount = 0;
                     StringBuilder sb = new StringBuilder();
 
+                    JSONArray proxyAlerts = response.optJSONArray("proxy_alerts");
                     if (proxyAlerts != null && proxyAlerts.length() > 0) {
                         sb.append("⚠️ PROXY ATTEMPTS (Same Phone / Multiple Accounts):\n");
-                        for (int j = 0; j < proxyAlerts.length(); j++) {
-                            JSONObject a = proxyAlerts.getJSONObject(j);
-                            String attemptedName = a.optString("attempted_student_name", "Student");
-                            String attemptedReg = a.optString("attempted_student_reg", "N/A");
-                            String origName = a.optString("original_student_name", "Student");
-                            String origReg = a.optString("original_student_reg", "N/A");
-                            String aTime = a.optString("attempt_time", "");
-                            sb.append("🚫 ").append(attemptedName).append(" (").append(attemptedReg).append(")")
-                              .append(" tried to mark using device of ")
-                              .append(origName).append(" (").append(origReg).append(")")
-                              .append(" at ").append(aTime).append("\n");
+                        for (int p = 0; p < proxyAlerts.length(); p++) {
+                            JSONObject alert = proxyAlerts.getJSONObject(p);
+                            String attemptedName = alert.optString("attempted_name", "Student");
+                            String attemptedReg = alert.optString("attempted_reg", "");
+                            String origName = alert.optString("original_name", "Student");
+                            String origReg = alert.optString("original_reg", "");
+                            String timeStr = alert.optString("attempt_time", "");
+
+                            sb.append("  🚫 ").append(attemptedName)
+                              .append(" (").append(attemptedReg.isEmpty() ? "N/A" : attemptedReg).append(")")
+                              .append(" tried to mark using device of ").append(origName)
+                              .append(" (").append(origReg.isEmpty() ? "N/A" : origReg).append(")")
+                              .append(timeStr.isEmpty() ? "" : " at " + timeStr)
+                              .append("\n");
                         }
-                        sb.append("────────────────────────\n");
+                        sb.append("----------------------------------------\n\n");
                     }
 
-                    if (students == null || students.length() == 0) {
-                        sb.append("No students have marked attendance yet.");
-                    } else {
-                        sb.append("Present Students:\n");
-                        for (int i = 0; i < students.length(); i++) {
-                            JSONObject s = students.getJSONObject(i);
-                            String sName = s.optString("student_name", "Student");
-                            String regNo = s.optString("register_no", "");
-                            String time = s.optString("attendance_time", "");
-                            sb.append(i + 1).append(". ").append(sName)
+                    for (int i = 0; i < students.length(); i++) {
+                        JSONObject s = students.getJSONObject(i);
+                        String sName = s.optString("student_name", "Student");
+                        String regNo = s.optString("register_no", "");
+                        String status = s.optString("status", "ABSENT");
+                        String method = s.optString("method", "");
+                        String time = s.optString("attendance_time", "");
+
+                        if ("PRESENT".equals(status)) {
+                            presentCount++;
+                            String tag = "MANUAL".equalsIgnoreCase(method) ? " [Manual]" : " [Auto]";
+                            sb.append("PRESENT  ").append(sName)
                               .append(" (").append(regNo.isEmpty() ? "N/A" : regNo).append(")")
-                              .append("  •  ").append(time).append("\n");
+                              .append(tag).append("  •  ").append(time).append("\n");
+                        } else {
+                            lastAbsentStudents.add(s);
+                            sb.append("absent   ").append(sName)
+                              .append(" (").append(regNo.isEmpty() ? "N/A" : regNo).append(")")
+                              .append("\n");
                         }
                     }
+                    if (tvPresentBadge != null) tvPresentBadge.setText("Count: " + presentCount + " / " + students.length());
+                    sb.append("\nTap this list to manually mark an absent student present.");
                     tvRosterList.setText(sb.toString().trim());
 
                 } catch (JSONException e) {
@@ -567,6 +621,145 @@ public class TeacherDashboardActivity extends AppCompatActivity {
             @Override
             public void onError(String errorMessage) {
                 tvRosterList.setText("Roster unavailable (" + errorMessage + ")");
+            }
+        });
+    }
+
+    /**
+     * NEW (folder 10): Manual Attendance — shows every currently-Absent
+     * student from the last roster fetch and lets the teacher flip one to
+     * Present via POST /api/teacher/mark-manual (folder 07).
+     */
+    private void showManualAttendanceDialog() {
+        if (lastRosterSessionId == -1) {
+            Toast.makeText(this, "No active session.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (lastAbsentStudents.isEmpty()) {
+            Toast.makeText(this, "Everyone in this classroom is already marked Present.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String[] names = new String[lastAbsentStudents.size()];
+        for (int i = 0; i < lastAbsentStudents.size(); i++) {
+            JSONObject s = lastAbsentStudents.get(i);
+            names[i] = s.optString("student_name") + " (" + s.optString("register_no", "N/A") + ")";
+        }
+
+        new AlertDialog.Builder(this)
+            .setTitle("Mark Present (Manual)")
+            .setItems(names, (dialog, which) -> {
+                JSONObject student = lastAbsentStudents.get(which);
+                int studentId = student.optInt("student_id");
+                try {
+                    JSONObject body = new JSONObject();
+                    body.put("session_id", lastRosterSessionId);
+                    body.put("student_id", studentId);
+                    progressBar.setVisibility(View.VISIBLE);
+                    ApiClient.getInstance(this).adminPost("/api/teacher/mark-manual", body, new ApiClient.ApiCallback() {
+                        @Override
+                        public void onSuccess(JSONObject response) {
+                            progressBar.setVisibility(View.GONE);
+                            Toast.makeText(TeacherDashboardActivity.this,
+                                    student.optString("student_name") + " marked Present (Manual).", Toast.LENGTH_SHORT).show();
+                            fetchActiveRoster();
+                        }
+
+                        @Override
+                        public void onError(String errorMessage) {
+                            progressBar.setVisibility(View.GONE);
+                            Toast.makeText(TeacherDashboardActivity.this, "Error: " + errorMessage, Toast.LENGTH_LONG).show();
+                        }
+                    });
+                } catch (JSONException e) {
+                    Toast.makeText(this, "Error building request.", Toast.LENGTH_SHORT).show();
+                }
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+
+    private void showHistoryFilterDialog() {
+        if (spinnerSubject.getSelectedItem() == null) {
+            Toast.makeText(this, "Select a subject first.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        SubjectItem selected = (SubjectItem) spinnerSubject.getSelectedItem();
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(50, 20, 50, 20);
+
+        EditText etDate = new EditText(this);
+        etDate.setHint("Date filter YYYY-MM-DD (optional)");
+        EditText etSearch = new EditText(this);
+        etSearch.setHint("Search student name or register no. (optional)");
+
+        layout.addView(etDate);
+        layout.addView(etSearch);
+
+        new AlertDialog.Builder(this)
+            .setTitle("Filter Attendance History")
+            .setView(layout)
+            .setPositiveButton("Search", (dialog, which) -> {
+                String date = etDate.getText().toString().trim();
+                String search = etSearch.getText().toString().trim();
+                fetchFilteredHistory(selected.id, date, search);
+            })
+            .setNegativeButton("Cancel", null)
+            .setNeutralButton("Clear Filter", (dialog, which) -> fetchSubjectHistory(selected.id))
+            .show();
+    }
+
+    private void fetchFilteredHistory(int subjectId, String date, String search) {
+        TextView tvHistoryList = findViewById(R.id.tvHistoryList);
+        if (tvHistoryList == null) return;
+        tvHistoryList.setText("Searching...");
+
+        StringBuilder path = new StringBuilder("/api/teacher/history?subject_id=" + subjectId);
+        if (!date.isEmpty()) path.append("&date=").append(Uri.encode(date));
+        if (!search.isEmpty()) path.append("&search=").append(Uri.encode(search));
+
+        ApiClient.getInstance(this).adminGet(path.toString(), new ApiClient.ApiCallback() {
+            @Override
+            public void onSuccess(JSONObject response) {
+                try {
+                    JSONArray records = response.optJSONArray("records");
+                    if (records == null || records.length() == 0) {
+                        tvHistoryList.setText("No matching attendance records.");
+                        return;
+                    }
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("Found ").append(records.length()).append(" record(s):\n\n");
+                    for (int i = 0; i < records.length(); i++) {
+                        JSONObject r = records.getJSONObject(i);
+                        String name = r.optString("student_name", "Student");
+                        String regNo = r.optString("register_no", "");
+                        String status = r.optString("status", "");
+                        String method = r.optString("method", "");
+                        String time = r.optString("attendance_time", "");
+                        String date2 = r.optString("session_date", "");
+                        String room = r.optString("room_name", "");
+                        String markedBy = r.optString("marked_by_name", "");
+
+                        String methodTag = method.isEmpty() ? "" : (" [" + method + (markedBy.isEmpty() ? "" : " by " + markedBy) + "]");
+
+                        sb.append(status).append("  ").append(date2).append("  ").append(name)
+                          .append(" (").append(regNo.isEmpty() ? "N/A" : regNo).append(")")
+                          .append("  •  ").append(room)
+                          .append(methodTag)
+                          .append(time.isEmpty() ? "" : ("  •  " + time))
+                          .append("\n");
+                    }
+                    tvHistoryList.setText(sb.toString().trim());
+                } catch (JSONException e) {
+                    tvHistoryList.setText("Error parsing filtered history.");
+                }
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                tvHistoryList.setText("Search failed (" + errorMessage + ")");
             }
         });
     }

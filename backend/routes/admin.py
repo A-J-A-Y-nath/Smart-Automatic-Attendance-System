@@ -640,7 +640,7 @@ def list_all_sessions():
             SELECT s.id as session_id, s.session_date, s.start_time, s.end_time, s.status,
                    sub.subject_name, sub.subject_code,
                    u.name as teacher_name, c.room_name,
-                   (SELECT COUNT(*) FROM attendance_records ar WHERE ar.session_id = s.id) as present_count
+                   (SELECT COUNT(*) FROM attendance_records ar WHERE ar.session_id = s.id AND ar.status = 'PRESENT') as present_count
             FROM attendance_sessions s
             JOIN subjects sub ON s.subject_id = sub.id
             JOIN users u ON s.teacher_id = u.id
@@ -696,8 +696,8 @@ def admin_start_session():
         # only students explicitly associated with this classroom.
         cursor.execute(
             """
-            INSERT INTO attendance_records (session_id, student_id, status, method)
-            SELECT %s, cst.student_id, 'ABSENT', 'AUTOMATIC'
+            INSERT INTO attendance_records (session_id, student_id, status, method, attendance_time)
+            SELECT %s, cst.student_id, 'ABSENT', 'AUTOMATIC', NULL
             FROM classroom_students cst
             JOIN users u ON u.id = cst.student_id
             WHERE cst.classroom_id = %s AND u.role = 'Student'
@@ -780,26 +780,64 @@ def admin_stop_session(session_id):
 @token_required
 @role_required(["Admin"])
 def list_all_attendance():
-    """GET /api/admin/attendance — recent attendance across all sessions"""
+    """
+    GET /api/admin/attendance — attendance across all sessions.
+    Optional filters: ?classroom_id= ?subject_id= ?date=YYYY-MM-DD
+    ?status=PRESENT|ABSENT ?search=<student name or register_no>
+
+    BUG FIXED (folder 10): used to sort by `ar.attendance_time DESC`
+    alone — ABSENT rows have a NULL attendance_time, and PostgreSQL
+    sorts NULLs FIRST in plain DESC order, so this list showed a jumble
+    of never-marked rows ahead of real recent activity. Fixed with an
+    explicit `NULLS LAST`.
+    """
+    classroom_id = request.args.get("classroom_id", type=int)
+    subject_id = request.args.get("subject_id", type=int)
+    date_str = request.args.get("date")
+    status = request.args.get("status")
+    search = request.args.get("search", "").strip()
+
+    where = ["1=1"]
+    params = []
+    if classroom_id:
+        where.append("s.classroom_id = %s")
+        params.append(classroom_id)
+    if subject_id:
+        where.append("s.subject_id = %s")
+        params.append(subject_id)
+    if date_str:
+        where.append("s.session_date = %s")
+        params.append(date_str)
+    if status in ("PRESENT", "ABSENT"):
+        where.append("ar.status = %s")
+        params.append(status)
+    if search:
+        where.append("(u.name ILIKE %s OR u.register_no ILIKE %s)")
+        params.extend([f"%{search}%", f"%{search}%"])
+
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("""
-            SELECT ar.id, ar.attendance_time, ar.status,
+        cursor.execute(f"""
+            SELECT ar.id, ar.attendance_time, ar.status, ar.method, ar.device_id,
+                   mb.name as marked_by_name,
                    u.name as student_name, u.register_no,
                    sub.subject_name, sub.subject_code,
                    t.name as teacher_name,
-                   s.session_date, c.room_name
+                   s.session_date, c.room_name, c.id as classroom_id
             FROM attendance_records ar
             JOIN attendance_sessions s ON ar.session_id = s.id
             JOIN users u ON ar.student_id = u.id
             JOIN subjects sub ON s.subject_id = sub.id
             JOIN users t ON s.teacher_id = t.id
             JOIN classrooms c ON s.classroom_id = c.id
-            ORDER BY ar.attendance_time DESC LIMIT 200
-        """)
+            LEFT JOIN users mb ON ar.marked_by = mb.id
+            WHERE {' AND '.join(where)}
+            ORDER BY s.session_date DESC, ar.attendance_time DESC NULLS LAST
+            LIMIT 200
+        """, params)
         records = cursor.fetchall()
-        return jsonify({"status": "success", "records": records}), 200
+        return jsonify({"status": "success", "records": records, "count": len(records)}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:

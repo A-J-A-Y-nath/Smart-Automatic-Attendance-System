@@ -8,10 +8,10 @@ An Android-based smart attendance system that automatically marks student attend
 
 ## 📊 Project Completion Progress
 
-![Progress](https://geps.dev/progress/98?dangerColor=8b0000&warningColor=fe8019&successColor=22c55e)
+![Progress](https://geps.dev/progress/100?dangerColor=8b0000&warningColor=fe8019&successColor=22c55e)
 
 ```
-[█████████████████████████████████████████████████████████████] 98% Overall System Completion
+[█████████████████████████████████████████████████████████████] 100% Overall System Completion
 ```
 
 | Module / Milestone | Status | Visual Progress Bar | Progress |
@@ -20,12 +20,13 @@ An Android-based smart attendance system that automatically marks student attend
 | **ESP8266 Hardware Beacon** | ✅ Complete | `██████████` | `100%` |
 | **Flask REST API & Auth** | ✅ Complete | `██████████` | `100%` |
 | **Android Mobile App & Scanning** | ✅ Complete | `██████████` | `100%` |
+| **Anti-Proxy Protection & Device Fingerprint** | ✅ Complete | `██████████` | `100%` |
+| **Rotating Security Codes & Rate Limiting** | ✅ Complete | `██████████` | `100%` |
 | **Admin Dashboard & Full CRUD** | ✅ Complete | `██████████` | `100%` |
 | **Classroom Hardware Identity & Rosters** | ✅ Complete | `██████████` | `100%` |
-| **Student Stats & Live Roster** | ✅ Complete | `██████████` | `100%` |
+| **Student Stats & Live Teacher Roster** | ✅ Complete | `██████████` | `100%` |
 | **Production Cloud Backend Deployment (Render)** | ✅ Complete | `██████████` | `100%` |
 | **FCM Push Notifications** | ✅ Complete | `██████████` | `100%` |
-| **Advanced Auth (Biometrics / OAuth)** | ⏳ Next Task | `████░░░░░░` | `40%` |
 
 ---
 
@@ -81,7 +82,9 @@ Smart-Automatic-Attendance-System/
 │   │   └── db.py         # psycopg2 connection pool (Neon PostgreSQL + DictCursor)
 │   ├── utils/
 │   │   ├── jwt_handler.py    # generate_token / decode_token
-│   │   └── password.py       # hash_password / verify_password (Werkzeug scrypt)
+│   │   ├── password.py       # hash_password / verify_password (Werkzeug scrypt)
+│   │   ├── session_code.py   # 15s rotating dynamic attendance security codes
+│   │   └── rate_limiter.py   # Sliding-window rate limiter (3 req / 10s -> HTTP 429)
 │   ├── app.py            # Flask entry point — registers all blueprints
 │   ├── seed_users.py     # Seeds PostgreSQL with test accounts and syncs sequences
 │   ├── test_auth_api.py  # E2E auth test suite (100% pass)
@@ -91,7 +94,7 @@ Smart-Automatic-Attendance-System/
 │
 ├── database/
 │   ├── schema.sql        # PostgreSQL DDL for all tables
-│   └── migrations/       # Idempotent migration scripts (001_classroom_and_attendance_foundation.sql)
+│   └── migrations/       # Idempotent migration scripts (001, 004_add_device_id_to_attendance.sql)
 │
 ├── esp8266/
 │   └── classroom_beacon/classroom_beacon.ino  # Arduino AP firmware
@@ -139,6 +142,12 @@ Smart-Automatic-Attendance-System/
 - [x] Classroom Lifecycle Management — Active/Inactive toggle states; inactive classrooms hidden from teachers/students while remaining visible to admins
 - [x] Classroom Student Roster Management — Direct student-to-classroom mapping via `classroom_students` table and Android multi-select checklist
 - [x] Classroom-Scoped Attendance Eligibility & FCM Alerts — Session initialization and FCM push notifications are scoped strictly to students mapped to the classroom via `classroom_students`
+- [x] Dynamic 15-Second Rotating Security Code — TOTP-style 4-digit code displayed on teacher screen, required for student marking to prevent remote proxying
+- [x] Anti-Proxy One-Device-Per-Session Lock — Physical device identification (`device_id`) prevents multiple student accounts from marking attendance from the same phone in the same session
+- [x] Live Teacher Proxy Detection & Alerts — Real-time warning banners on the teacher active roster highlighting unauthorized device sharing attempts
+- [x] Sliding-Window Rate Limiting — Max 3 mark-attendance requests per 10s returning HTTP 429 to defeat automated brute-force code guessing
+- [x] Faculty Manual Attendance Override — `/api/teacher/mark-manual` enables faculty to mark absent students as Present with an explicit audit trail
+- [x] Database Clock Synchronization — Server and database operations synchronized using PostgreSQL `CURRENT_TIMESTAMP` to prevent timezone skew
 
 ---
 
