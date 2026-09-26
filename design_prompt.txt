@@ -1,0 +1,109 @@
+# Figma AI Mobile Redesign Prompt: Smart Automatic Attendance System
+
+Use `ui_reference.svg` as the visual and structural source of truth. Create an editable, production-grade Android mobile UI redesign (Material 3 with refined glassmorphism, 390x844 dp frames).
+
+## Design System & Redesign Guidelines
+- Role & Screen Authenticity: Preserve all existing screens, user roles (Student, Teacher, Admin), hierarchy, and information architecture exactly as represented in `ui_reference.svg`. Do NOT add new screens, invent hypothetical features, or alter the core functionality.
+- Visual Language: Elevate the current UI into a modern, clean, and cohesive enterprise educational product. Use a curated palette based on the existing tokens: Forest Green primary (`#1B8B3E` / Container `#E8F5E9`), Dark Navy headings/toolbar (`#1A2340`), Slate secondary text (`#6B7A99`), Soft background gradient (`#F4F6FA` to `#E8EDF5`), Crisp white glassmorphic cards (`#FFFFFF`, stroke `#E2E8F0`, corner radius 20–24 dp), and distinct status indicators (Green `#1B8B3E` for Present, Red `#E53935` for Absent, Amber `#B45309` on `#FFFBEB` for Proxy alerts).
+- Typography & Spacing: Apply an 8dp grid system with balanced padding, clear typographic scale, legible data tables, circular percentage badges, and accessible touch targets (minimum 48dp).
+- Components: Create reusable Figma components for Cards, Dropdown Spinners, Text Input Fields, Badges, Buttons (Primary, Outlined, Text), and Modal Dialogs.
+
+---
+
+## Frames to Generate (10 Editable Mobile Screens)
+
+1. `Screen 01 - Login Screen`:
+   - Role: All Roles (Student, Teacher, Admin)
+   - Elements: App brand icon, "Welcome Back" headline, Email input, Password input with visibility toggle, horizontal Role RadioGroup ("Student" default selected, "Teacher", "Admin"), primary "Login" button (56dp height, corner radius 12dp).
+
+2. `Screen 02 - Student Dashboard (Idle / No Session)`:
+   - Role: Student
+   - Elements: Top bar with title, "Refresh", and "Logout" buttons; Profile Card (Name, Reg No, Email, Device ID); Two-column row: Status Card ("No active class session") and Mark Present Card with "Mark Attendance" button; My Attendance Card featuring an 85.2% Overall circular progress badge, summary counts (Present: 23, Absent: 4, Total: 27), horizontal progress bar, and Subject Breakdown list with individual progress bars.
+
+3. `Screen 03 - Student Attendance Code Dialog`:
+   - Role: Student
+   - Elements: Dimmed background showing active session status underneath; Centered AlertDialog card titled "Enter Attendance Code"; explanatory subtext ("Ask your teacher for the code currently shown on their screen. It changes every 15 seconds."); 4-digit code input field displaying `8 4 9 2`; "CANCEL" and "SUBMIT & SCAN" buttons.
+
+4. `Screen 04 - Student Attendance Confirmed (Present ✓)`:
+   - Role: Student
+   - Elements: Status Card showing green "Present ✓" confirmation badge with beacon verification status; Mark Present button in disabled "Already Marked" state; Updated attendance stats (Present: 24, Total: 28); Bottom Toast confirmation banner: "✓ Attendance recorded successfully!".
+
+5. `Screen 05 - Teacher Dashboard (Idle / Setup)`:
+   - Role: Teacher
+   - Elements: Top bar ("Refresh", "Logout"); Faculty Profile Card (Name, ID, Email); Session Configuration Card with Classroom selector spinner (`MCA Lab 101`), Subject selector spinner (`Mobile Application Dev`), and primary "Start Attendance Session" button; Active Session Status Card ("No active session"); Live Present Students Card ("Count: 0", "No active session to display live roster"); Subject Attendance History Card with past record prompt.
+
+6. `Screen 06 - Teacher Beacon Options Picker Dialog`:
+   - Role: Teacher
+   - Elements: Dimmed dashboard background; AlertDialog titled "Attendance Beacon Source" with single-choice selection list:
+     - `● Classroom Beacon (default)` (esp8266-mca101 hardware beacon)
+     - `○ Teacher Hotspot` (personal phone hotspot for this session only)
+     - `○ Nearby Wi-Fi` (scan and select from visible networks)
+     - "CANCEL" button.
+
+7. `Screen 07 - Teacher Dashboard (Active Session & Live Roster)`:
+   - Role: Teacher
+   - Elements: Active Session Status Card with `● SESSION ACTIVE` green tag, Subject title, "Time Left: 04:32" countdown timer, highlighted rotating security code box (`ATTENDANCE CODE: 8492 (next in 11s)`), and red outlined "Stop / Cancel Session" button; Live Present Students Card ("Count: 2 / 24") displaying a prominent Amber Warning Banner for detected proxy attempts (`⚠️ PROXY ATTEMPT: Student B tried using device of Student A at 10:18 AM`), followed by live student roster rows (`PRESENT [Auto]`, `absent`), and tap-to-override prompt.
+
+8. `Screen 08 - Teacher Manual Override Dialog`:
+   - Role: Teacher
+   - Elements: Dimmed active roster background; AlertDialog titled "Mark Present (Manual)"; list of currently absent students from this classroom with individual "Mark" action buttons; "CANCEL" button.
+
+9. `Screen 09 - Admin Dashboard (Overview & Management)`:
+   - Role: Admin
+   - Elements: Top bar with title, "Refresh", and "Logout"; 7 modular management cards:
+     - 🎓 Students Card (+ Add, Edit buttons; enrolled count)
+     - 👨‍🏫 Teachers Card (+ Add, Edit buttons; faculty count)
+     - ⚙️ Administrators Card (+ Add, Edit buttons; admin count)
+     - 📚 Subjects Card (+ Add, Edit buttons; course list)
+     - 🏫 Classrooms Card (+ Add, Edit buttons; active beacon SSID, RSSI threshold)
+     - 🕐 Sessions Card (+ Start button; active & completed session summary)
+     - 📋 Attendance Records Card (recent logs table showing student, subject, status, method, and timestamp).
+
+10. `Screen 10 - Admin Entity Add / Edit Modal`:
+    - Role: Admin
+    - Elements: Dimmed admin dashboard background; Modal dialog titled "Add New Student"; Form inputs for Full Name, Email Address, Register Number, and Initial Password; Classroom enrollment checkbox ("Enroll in MCA Lab 101 roster"); "CANCEL" and "SAVE STUDENT" primary buttons.
+
+---
+
+## Interactive Figma Prototype Connections
+
+Connect the frames using Figma prototype smart animate transitions according to the actual application navigation logic:
+
+### 1. Authentication & Role-Based Entry
+- `Screen 01 (Login)`:
+  - RadioButton `Student` + Tap `Login` Button ──(Smart Animate)──► Navigate to `Screen 02 (Student Dashboard - Idle)`
+  - RadioButton `Teacher` + Tap `Login` Button ──(Smart Animate)──► Navigate to `Screen 05 (Teacher Dashboard - Idle)`
+  - RadioButton `Admin` + Tap `Login` Button ──(Smart Animate)──► Navigate to `Screen 09 (Admin Dashboard - Overview)`
+
+### 2. Student Attendance Flow
+- `Screen 02 (Student Dashboard - Idle)`:
+  - Tap `Mark Attendance` Button ──(Open Overlay)──► `Screen 03 (Attendance Code Dialog)`
+  - Tap `Logout` Button ──(Navigate)──► `Screen 01 (Login Screen)`
+- `Screen 03 (Attendance Code Dialog)`:
+  - Tap `CANCEL` ──(Close Overlay)──► Returns to `Screen 02 (Student Dashboard - Idle)`
+  - Tap `SUBMIT & SCAN` ──(Close Overlay & Navigate)──► `Screen 04 (Attendance Confirmed - Present ✓)`
+- `Screen 04 (Attendance Confirmed)`:
+  - Tap `Logout` Button ──(Navigate)──► `Screen 01 (Login Screen)`
+
+### 3. Teacher Attendance Session & Live Roster Flow
+- `Screen 05 (Teacher Dashboard - Idle)`:
+  - Tap `Start Attendance Session` Button ──(Open Overlay)──► `Screen 06 (Beacon Options Picker Dialog)`
+  - Tap `Logout` Button ──(Navigate)──► `Screen 01 (Login Screen)`
+- `Screen 06 (Beacon Options Picker Dialog)`:
+  - Tap `CANCEL` ──(Close Overlay)──► Returns to `Screen 05 (Teacher Dashboard - Idle)`
+  - Tap `Classroom Beacon (default)` OR `Teacher Hotspot` OR `Nearby Wi-Fi` ──(Close Overlay & Navigate)──► `Screen 07 (Active Session & Live Roster)`
+- `Screen 07 (Active Session & Live Roster)`:
+  - Tap `Stop / Cancel Session` Button ──(Navigate)──► `Screen 05 (Teacher Dashboard - Idle)`
+  - Tap on `Live Roster List` (or absent student row) ──(Open Overlay)──► `Screen 08 (Manual Override Dialog)`
+  - Tap `Logout` Button ──(Navigate)──► `Screen 01 (Login Screen)`
+- `Screen 08 (Manual Override Dialog)`:
+  - Tap `CANCEL` ──(Close Overlay)──► Returns to `Screen 07 (Active Session)`
+  - Tap `Mark` on any absent student ──(Close Overlay)──► Returns to `Screen 07` with updated Present count and student tagged as `[Manual]`
+
+### 4. Admin Management Flow
+- `Screen 09 (Admin Dashboard - Overview)`:
+  - Tap `+ Add` or `Edit` on Students / Teachers / Classrooms Cards ──(Open Overlay)──► `Screen 10 (Admin Entity Modal)`
+  - Tap `Logout` Button ──(Navigate)──► `Screen 01 (Login Screen)`
+- `Screen 10 (Admin Entity Modal)`:
+  - Tap `CANCEL` ──(Close Overlay)──► Returns to `Screen 09 (Admin Dashboard - Overview)`
+  - Tap `SAVE STUDENT` ──(Close Overlay)──► Returns to `Screen 09 (Admin Dashboard - Overview)`

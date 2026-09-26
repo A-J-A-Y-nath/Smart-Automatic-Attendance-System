@@ -7,47 +7,41 @@
     android:background="@drawable/bg_gradient"
     tools:context=".TeacherDashboardActivity">
 
-    <!-- Top Bar -->
+    <!-- Top Bar (Figma Screen 05 / 07) -->
     <TextView
         android:id="@+id/tvHeader"
-        android:layout_width="250dp"
-        android:layout_height="34dp"
-        android:layout_margin="24dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="8dp"
         android:text="Teacher Dashboard"
-        android:textAppearance="?attr/textAppearanceHeadlineMedium"
+        android:textColor="@color/text_primary"
+        android:textSize="20sp"
         android:textStyle="bold"
+        app:layout_constraintEnd_toStartOf="@+id/btnRefresh"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-<!--    <Button-->
-<!--        android:id="@+id/btnSwitch"-->
-<!--        style="@style/Widget.Material3.Button.TextButton"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:layout_marginEnd="4dp"-->
-<!--        android:text="Switch"-->
-<!--        app:layout_constraintBottom_toBottomOf="@+id/tvHeader"-->
-<!--        app:layout_constraintEnd_toStartOf="@+id/btnRefresh"-->
-<!--        app:layout_constraintTop_toTopOf="@+id/tvHeader" />-->
-
     <Button
         android:id="@+id/btnRefresh"
-        style="@style/Widget.Material3.Button.TextButton"
+        style="@style/SecondaryHeaderButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="12dp"
         android:text="Refresh"
+        android:textColor="@color/md_theme_light_primary"
         app:layout_constraintBottom_toBottomOf="@+id/tvHeader"
         app:layout_constraintEnd_toStartOf="@+id/btnLogout"
         app:layout_constraintTop_toTopOf="@+id/tvHeader" />
 
     <Button
         android:id="@+id/btnLogout"
-        style="@style/Widget.Material3.Button.TextButton"
+        style="@style/SecondaryHeaderButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="16dp"
         android:text="Logout"
+        android:textColor="@color/danger_red"
         app:layout_constraintBottom_toBottomOf="@+id/tvHeader"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@+id/tvHeader" />
@@ -58,7 +52,9 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:clipToPadding="false"
-        android:padding="16dp"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="24dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -69,22 +65,23 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Card 1: Profile Info -->
+            <!-- Card 1: Faculty Profile Info (Figma Screen 05) -->
             <LinearLayout
                 android:id="@+id/cardProfile"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 android:background="@drawable/glass_card"
-                android:elevation="4dp"
+                android:elevation="3dp"
                 android:orientation="vertical"
-                android:padding="20dp">
+                android:padding="18dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Faculty Profile"
-                    android:textAppearance="?attr/textAppearanceTitleMedium"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -92,18 +89,20 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
+                    android:lineSpacingExtra="3dp"
                     android:text="Loading profile..."
-                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp" />
             </LinearLayout>
 
-            <!-- Card 2: Configuration / Action -->
+            <!-- Card 2: Configuration / Action (Figma Screen 05) -->
             <LinearLayout
                 android:id="@+id/cardConfig"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 android:background="@drawable/glass_card"
-                android:elevation="4dp"
+                android:elevation="3dp"
                 android:orientation="vertical"
                 android:padding="20dp">
 
@@ -111,115 +110,141 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Session Configuration"
-                    android:textAppearance="?attr/textAppearanceTitleMedium"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="14dp"
                     android:text="Select Classroom / Class Name:"
-                    android:textAppearance="?attr/textAppearanceBodyMedium"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp"
                     android:textStyle="bold" />
 
                 <Spinner
                     android:id="@+id/spinnerClassroom"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="4dp"
-                    android:background="@drawable/glass_card"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/input_box"
                     android:paddingHorizontal="12dp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="14dp"
                     android:text="Select Subject:"
-                    android:textAppearance="?attr/textAppearanceBodyMedium"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp"
                     android:textStyle="bold" />
 
                 <Spinner
                     android:id="@+id/spinnerSubject"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="4dp"
-                    android:background="@drawable/glass_card"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/input_box"
                     android:paddingHorizontal="12dp" />
 
+                <!-- Start Button (Figma Screen 05: 52dp, rx=12dp) -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnStartSession"
+                    style="@style/PrimaryActionButton"
                     android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:layout_marginTop="24dp"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="20dp"
                     android:text="Start Attendance Session"
-                    app:cornerRadius="12dp" />
-
+                    android:textSize="14sp" />
             </LinearLayout>
 
-            <!-- Card 3: Active Timer Display -->
+            <!-- Card 3: Active Timer Display (Figma Screen 07) -->
             <LinearLayout
                 android:id="@+id/cardTimer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 android:background="@drawable/glass_card"
-                android:elevation="4dp"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="20dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Active Session Status"
-                    android:textAppearance="?attr/textAppearanceTitleMedium"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tvTimerStatus"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="No active session"
-                    android:textAlignment="center"
-                    android:textAppearance="?attr/textAppearanceTitleLarge"
-                    android:textColor="@color/md_theme_light_primary"
-                    android:textStyle="bold" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnStopSession"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="16dp"
-                    android:text="Stop / Cancel Session"
-                    android:visibility="gone"
-                    app:cornerRadius="12dp" />
-            </LinearLayout>
-
-            <!-- Card 4: Present Students Live Roster -->
-            <LinearLayout
-                android:id="@+id/cardRoster"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:background="@drawable/glass_card"
-                android:elevation="4dp"
+                android:elevation="3dp"
                 android:orientation="vertical"
                 android:padding="20dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Active Session Status"
+                        android:textColor="@color/text_primary"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/badgeActiveSession"
+                        style="@style/LiveBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="● SESSION ACTIVE"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvTimerStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="No active session"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp" />
+
+                <!-- Stop Button (Figma Screen 07) -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnStopSession"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="42dp"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/card_stop_button"
+                    android:text="Stop / Cancel Session"
+                    android:textColor="@color/danger_red"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    app:cornerRadius="10dp"
+                    app:strokeColor="@color/alert_danger_stroke" />
+            </LinearLayout>
+
+            <!-- Card 4: Present Students Live Roster (Figma Screen 07) -->
+            <LinearLayout
+                android:id="@+id/cardRoster"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:background="@drawable/glass_card"
+                android:elevation="3dp"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="Live Present Students"
-                        android:textAppearance="?attr/textAppearanceTitleMedium"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -227,8 +252,9 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Count: 0"
-                        android:textStyle="bold"
-                        android:textColor="@color/md_theme_light_primary" />
+                        android:textColor="@color/md_theme_light_primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
 
                 <TextView
@@ -236,9 +262,10 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
+                    android:lineSpacingExtra="3dp"
                     android:text="No active session to display live roster."
-                    android:textAppearance="?attr/textAppearanceBodyMedium" />
-
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <!-- Card 5: Previous Attendance Records / Subject History -->
@@ -248,15 +275,16 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="24dp"
                 android:background="@drawable/glass_card"
-                android:elevation="4dp"
+                android:elevation="3dp"
                 android:orientation="vertical"
                 android:padding="20dp">
 
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Subject Attendance History"
-                    android:textAppearance="?attr/textAppearanceTitleMedium"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -264,9 +292,10 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
+                    android:lineSpacingExtra="3dp"
                     android:text="Select a subject to view past attendance records."
-                    android:textAppearance="?attr/textAppearanceBodyMedium" />
-
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
             </LinearLayout>
 
         </LinearLayout>

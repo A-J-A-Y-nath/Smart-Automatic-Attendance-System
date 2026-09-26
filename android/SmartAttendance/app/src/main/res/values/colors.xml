@@ -3,31 +3,85 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- Primary Brand Colors (Green like the design) -->
+    <!-- Primary Brand & Action Colors (Figma Spec) -->
+    <color name="primary_green">#1B8B3E</color>
+    <color name="brand_green_dark">#077A3D</color>
     <color name="md_theme_light_primary">#1B8B3E</color>
     <color name="md_theme_light_onPrimary">#FFFFFF</color>
-    <color name="md_theme_light_primaryContainer">#C8F0D4</color>
-    <color name="md_theme_light_onPrimaryContainer">#0A4A1F</color>
+    <color name="md_theme_light_primaryContainer">#DCFCE7</color>
+    <color name="md_theme_light_onPrimaryContainer">#15803D</color>
 
-    <!-- Dark Navy Toolbar -->
-    <color name="toolbar_bg">#1A2340</color>
-    <color name="toolbar_text">#FFFFFF</color>
-
-    <!-- Background (Clean white like the mockup) -->
-    <color name="bg_gradient_start">#F4F6FA</color>
-    <color name="bg_gradient_end">#E8EDF5</color>
-
-    <!-- Cards (White clean cards) -->
-    <color name="glass_card_bg">#FFFFFFFF</color>
-    <color name="glass_card_stroke">#E2E8F0</color>
-
-    <!-- Status Colors -->
-    <color name="live_badge_bg">#E8F5E9</color>
-    <color name="live_badge_text">#1B8B3E</color>
-    <color name="present_green">#1B8B3E</color>
+    <!-- Error / Red / Destruction -->
+    <color name="error_red">#E53935</color>
+    <color name="action_orange">#B83D04</color>
+    <color name="danger_red">#DC2626</color>
     <color name="absent_red">#E53935</color>
+
+    <!-- Typography (Figma Spec) -->
     <color name="text_primary">#1A2340</color>
     <color name="text_secondary">#6B7A99</color>
-    <color name="divider_color">#E8EDF5</color>
-    <color name="scan_button_bg">#1B8B3E</color>
+    <color name="text_muted">#94A3B8</color>
+    <color name="text_hint">#94A3B8</color>
+    <color name="text_admin_dark">#0E0F13</color>
+
+    <!-- Accents (Figma: #003196 for Subtitle) -->
+    <color name="accent_blue">#003196</color>
+
+    <!-- Translucent Frosted Glass Cards (Figma: rgba(204,204,204,0.90) + 1px solid black) -->
+    <color name="glass_card_bg">#E6CCCCCC</color>
+    <color name="glass_card_stroke">#FF000000</color>
+    <color name="glass_card_inner">#F8FAFC</color>
+
+    <!-- Modal Dialogs (Figma: 24dp radius, rgba(204,204,204,0.95) + 1px solid black) -->
+    <color name="dialog_bg">#F2CCCCCC</color>
+    <color name="dialog_stroke">#FF000000</color>
+    <color name="dialog_overlay">#A60F172A</color>
+
+    <!-- Inputs & Borders (Figma: #F8FAFC fill, #E2E8F0 border, 12dp radius) -->
+    <color name="input_fill">#F8FAFC</color>
+    <color name="input_border">#E2E8F0</color>
+    <color name="progress_track">#E2E8F0</color>
+    <color name="divider_color">#E2E8F0</color>
+
+    <!-- Brand Logo Circle (Figma: #BFC4C0 fill, 2px 80% black stroke) -->
+    <color name="brand_logo_bg">#BFC4C0</color>
+    <color name="brand_logo_stroke">#CC000000</color>
+
+    <!-- Role Pills (Figma: Active #1B8B3E, Inactive transparent with #E2E8F0 border) -->
+    <color name="pill_active_bg">#1B8B3E</color>
+    <color name="pill_active_text">#FFFFFF</color>
+    <color name="pill_inactive_bg">#00000000</color>
+    <color name="pill_inactive_stroke">#CBD5E1</color>
+    <color name="pill_inactive_text">#6B7A99</color>
+
+    <!-- Status & Alerts (Figma Spec) -->
+    <color name="live_badge_bg">#DCFCE7</color>
+    <color name="live_badge_text">#15803D</color>
+    <color name="present_green">#1B8B3E</color>
+    <color name="present_light_bg">#F0FDF4</color>
+    <color name="present_light_border">#86EFAC</color>
+    <color name="present_light_text">#166534</color>
+    <color name="absent_light_bg">#FEE2E2</color>
+    <color name="absent_light_border">#F87171</color>
+    <color name="alert_danger_bg">#FEE2E2</color>
+    <color name="alert_danger_stroke">#F87171</color>
+    <color name="warning_yellow_bg">#FFFBEB</color>
+    <color name="warning_yellow_border">#FDE68A</color>
+    <color name="warning_yellow_text">#B45309</color>
+    <color name="warning_sub_text">#92400E</color>
+
+    <!-- Rotating Code Box -->
+    <color name="code_box_bg">#F0FDF4</color>
+    <color name="code_box_stroke">#16A34A</color>
+
+    <!-- Overall Attendance Badge -->
+    <color name="overall_badge_bg">#E8F5E9</color>
+    <color name="overall_badge_stroke">#C8F0D4</color>
+    <color name="overall_badge_text">#1B8B3E</color>
+    <color name="light_success_bg">#E8F5E9</color>
+    <color name="success_border">#C8F0D4</color>
+
+    <!-- Toolbar / Status Header -->
+    <color name="toolbar_bg">#1A2340</color>
+    <color name="toolbar_text">#FFFFFF</color>
 </resources>

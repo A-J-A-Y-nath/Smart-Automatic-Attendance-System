@@ -2,18 +2,86 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    
-    <!-- Primary Brand Colors (Dark Mode) -->
-    <color name="md_theme_light_primary">#60A5FA</color>
-    <color name="md_theme_light_onPrimary">#0F172A</color>
-    <color name="md_theme_light_primaryContainer">#1E3A8A</color>
-    <color name="md_theme_light_onPrimaryContainer">#DBEAFE</color>
 
-    <!-- Background Gradients (Dark) -->
-    <color name="bg_gradient_start">#0F172A</color>
-    <color name="bg_gradient_end">#1E293B</color>
+    <!-- Primary Brand & Action Colors (Dark Equivalent) -->
+    <color name="primary_green">#1B8B3E</color>
+    <color name="brand_green_dark">#16A34A</color>
+    <color name="md_theme_light_primary">#1B8B3E</color>
+    <color name="md_theme_light_onPrimary">#FFFFFF</color>
+    <color name="md_theme_light_primaryContainer">#064E3B</color>
+    <color name="md_theme_light_onPrimaryContainer">#A7F3D0</color>
 
-    <!-- Glassmorphism Cards (Dark) -->
-    <color name="glass_card_bg">#33FFFFFF</color>
-    <color name="glass_card_stroke">#1AFFFFFF</color>
+    <!-- Error / Red / Destruction -->
+    <color name="error_red">#EF4444</color>
+    <color name="action_orange">#F97316</color>
+    <color name="danger_red">#F87171</color>
+    <color name="absent_red">#EF4444</color>
+
+    <!-- Typography (Dark Equivalent) -->
+    <color name="text_primary">#F8FAFC</color>
+    <color name="text_secondary">#94A3B8</color>
+    <color name="text_muted">#64748B</color>
+    <color name="text_hint">#64748B</color>
+    <color name="text_admin_dark">#F8FAFC</color>
+
+    <!-- Accents (Dark Mode Readable Blue) -->
+    <color name="accent_blue">#60A5FA</color>
+
+    <!-- Translucent Frosted Glass Cards (Dark Equivalent: rgba(30,41,59,0.90) + 1px solid slate) -->
+    <color name="glass_card_bg">#E61E293B</color>
+    <color name="glass_card_stroke">#334155</color>
+    <color name="glass_card_inner">#0F172A</color>
+
+    <!-- Modal Dialogs (Dark Equivalent: 24dp radius, rgba(30,41,59,0.95) + 1px solid slate) -->
+    <color name="dialog_bg">#F21E293B</color>
+    <color name="dialog_stroke">#334155</color>
+    <color name="dialog_overlay">#CC000000</color>
+
+    <!-- Inputs & Borders (Dark Mode: #0F172A fill, #334155 border, 12dp radius) -->
+    <color name="input_fill">#0F172A</color>
+    <color name="input_border">#334155</color>
+    <color name="progress_track">#334155</color>
+    <color name="divider_color">#334155</color>
+
+    <!-- Brand Logo Circle (Dark: #1E293B with #334155 border) -->
+    <color name="brand_logo_bg">#1E293B</color>
+    <color name="brand_logo_stroke">#334155</color>
+
+    <!-- Role Pills (Dark Mode) -->
+    <color name="pill_active_bg">#1B8B3E</color>
+    <color name="pill_active_text">#FFFFFF</color>
+    <color name="pill_inactive_bg">#00000000</color>
+    <color name="pill_inactive_stroke">#334155</color>
+    <color name="pill_inactive_text">#94A3B8</color>
+
+    <!-- Status & Alerts (Dark Mode) -->
+    <color name="live_badge_bg">#064E3B</color>
+    <color name="live_badge_text">#4ADE80</color>
+    <color name="present_green">#22C55E</color>
+    <color name="present_light_bg">#052E16</color>
+    <color name="present_light_border">#047857</color>
+    <color name="present_light_text">#86EFAC</color>
+    <color name="absent_light_bg">#450A0A</color>
+    <color name="absent_light_border">#991B1B</color>
+    <color name="alert_danger_bg">#450A0A</color>
+    <color name="alert_danger_stroke">#991B1B</color>
+    <color name="warning_yellow_bg">#451A03</color>
+    <color name="warning_yellow_border">#78350F</color>
+    <color name="warning_yellow_text">#FDE68A</color>
+    <color name="warning_sub_text">#FCD34D</color>
+
+    <!-- Rotating Code Box -->
+    <color name="code_box_bg">#052E16</color>
+    <color name="code_box_stroke">#16A34A</color>
+
+    <!-- Overall Attendance Badge -->
+    <color name="overall_badge_bg">#064E3B</color>
+    <color name="overall_badge_stroke">#047857</color>
+    <color name="overall_badge_text">#4ADE80</color>
+    <color name="light_success_bg">#064E3B</color>
+    <color name="success_border">#047857</color>
+
+    <!-- Toolbar / Status Header -->
+    <color name="toolbar_bg">#0F172A</color>
+    <color name="toolbar_text">#F8FAFC</color>
 </resources>

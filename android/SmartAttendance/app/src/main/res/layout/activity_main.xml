@@ -5,138 +5,264 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_gradient"
+    android:background="@drawable/bg_screen_texture"
     tools:context=".MainActivity">
 
-    <LinearLayout
-        android:id="@+id/loginCard"
+    <!-- Scroll container to support smaller screens & keyboard opening -->
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="24dp"
-        android:background="@drawable/glass_card"
-        android:elevation="8dp"
-        android:orientation="vertical"
-        android:padding="24dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            android:text="Welcome Back"
-            android:textAlignment="center"
-            android:textAppearance="?attr/textAppearanceHeadlineMedium"
-            android:textStyle="bold" />
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:hint="Email"
-            app:boxBackgroundColor="@android:color/transparent">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etEmail"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textEmailAddress" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            android:hint="Password"
-            app:boxBackgroundColor="@android:color/transparent"
-            app:endIconMode="password_toggle">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etPassword"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textPassword" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <RadioGroup
-            android:id="@+id/rgRole"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            android:orientation="horizontal"
-            android:gravity="center">
-
-            <RadioButton
-                android:id="@+id/rbStudent"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
-                android:checked="true"
-                android:text="Student" />
-
-            <RadioButton
-                android:id="@+id/rbTeacher"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
-                android:text="Teacher" />
-
-            <RadioButton
-                android:id="@+id/rbAdmin"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Admin" />
-        </RadioGroup>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnLogin"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="Login"
-            android:layout_marginBottom="16dp"
-            app:cornerRadius="12dp" />
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:weightSum="3">
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingTop="28dp"
+            android:paddingBottom="24dp">
 
-<!--            <com.google.android.material.button.MaterialButton-->
-<!--                android:id="@+id/btnTestStudent"-->
-<!--                style="@style/Widget.Material3.Button.OutlinedButton"-->
-<!--                android:layout_width="0dp"-->
-<!--                android:layout_height="wrap_content"-->
-<!--                android:layout_weight="1"-->
-<!--                android:layout_marginEnd="4dp"-->
-<!--                android:text="Test Student"-->
-<!--                android:textSize="11sp" />-->
+            <!-- Top Header (Figma Screen 01: 18px Bold) -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:text="Smart Attendance System"
+                android:textColor="@color/text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold" />
 
-<!--            <com.google.android.material.button.MaterialButton-->
-<!--                android:id="@+id/btnTestTeacher"-->
-<!--                style="@style/Widget.Material3.Button.OutlinedButton"-->
-<!--                android:layout_width="0dp"-->
-<!--                android:layout_height="wrap_content"-->
-<!--                android:layout_weight="1"-->
-<!--                android:layout_marginStart="4dp"-->
-<!--                android:layout_marginEnd="4dp"-->
-<!--                android:text="Test Teacher"-->
-<!--                android:textSize="11sp" />-->
+            <!-- Circular Logo with Checkmark (Figma: 64x64px, #BFC4C0 with 2px dark border) -->
+            <ImageView
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_marginBottom="12dp"
+                android:contentDescription="Smart Attendance Logo"
+                android:src="@drawable/ic_brand_attendance" />
 
-<!--            <com.google.android.material.button.MaterialButton-->
-<!--                android:id="@+id/btnTestAdmin"-->
-<!--                style="@style/Widget.Material3.Button.OutlinedButton"-->
-<!--                android:layout_width="0dp"-->
-<!--                android:layout_height="wrap_content"-->
-<!--                android:layout_weight="1"-->
-<!--                android:layout_marginStart="4dp"-->
-<!--                android:text="Test Admin"-->
-<!--                android:textSize="11sp" />-->
+            <!-- App Title (Figma: 22px Extra Bold #1A2340) -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Smart Attendance"
+                android:textColor="@color/text_primary"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <!-- App Subtitle (Figma: 13px #003196) -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:layout_marginBottom="22dp"
+                android:text="Autonomous Wi-Fi Beacon Verification"
+                android:textColor="@color/accent_blue"
+                android:textSize="13sp" />
+
+            <!-- Translucent Frosted Glass Card (Figma: rgba(204,204,204,0.90), 1px solid black, 20px radius) -->
+            <LinearLayout
+                android:id="@+id/loginCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/glass_card"
+                android:elevation="6dp"
+                android:orientation="vertical"
+                android:paddingHorizontal="18dp"
+                android:paddingVertical="20dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:text="Welcome Back"
+                    android:textAlignment="center"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <!-- Email Address Label (Figma: 13px SemiBold #6B7A99) -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="5dp"
+                    android:text="Email Address"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <!-- Email Input (Figma: 48px height, 12px radius, #F8FAFC fill, #E2E8F0 border) -->
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="14dp"
+                    app:boxBackgroundColor="@color/input_fill"
+                    app:boxCornerRadiusBottomEnd="12dp"
+                    app:boxCornerRadiusBottomStart="12dp"
+                    app:boxCornerRadiusTopEnd="12dp"
+                    app:boxCornerRadiusTopStart="12dp"
+                    app:boxStrokeColor="@color/input_border"
+                    app:boxStrokeWidth="1dp"
+                    app:hintEnabled="false"
+                    app:startIconDrawable="@drawable/ic_mail_figma"
+                    app:startIconTint="@color/text_secondary">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etEmail"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:hint="student@rit.ac.in"
+                        android:inputType="textEmailAddress"
+                        android:paddingVertical="10dp"
+                        android:textColor="@color/text_primary"
+                        android:textColorHint="@color/text_hint"
+                        android:textSize="14sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Password Label (Figma: 13px SemiBold #6B7A99) -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="5dp"
+                    android:text="Password"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <!-- Password Input (Figma: 48px height, 12px radius, lock & eye icons) -->
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="14dp"
+                    app:boxBackgroundColor="@color/input_fill"
+                    app:boxCornerRadiusBottomEnd="12dp"
+                    app:boxCornerRadiusBottomStart="12dp"
+                    app:boxCornerRadiusTopEnd="12dp"
+                    app:boxCornerRadiusTopStart="12dp"
+                    app:boxStrokeColor="@color/input_border"
+                    app:boxStrokeWidth="1dp"
+                    app:endIconDrawable="@drawable/ic_eye_figma"
+                    app:endIconMode="password_toggle"
+                    app:endIconTint="@color/text_secondary"
+                    app:hintEnabled="false"
+                    app:startIconDrawable="@drawable/ic_lock_figma"
+                    app:startIconTint="@color/text_secondary">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etPassword"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:hint="••••••••••••"
+                        android:inputType="textPassword"
+                        android:paddingVertical="10dp"
+                        android:textColor="@color/text_primary"
+                        android:textColorHint="@color/text_hint"
+                        android:textSize="14sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Role Selector Label (Figma: 13px SemiBold #6B7A99) -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="6dp"
+                    android:text="Role"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <!-- Segmented Role Selector Pills (Figma: 32px height, 8px radius, radio circles) -->
+                <RadioGroup
+                    android:id="@+id/rgRole"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="20dp"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:weightSum="3">
+
+                    <RadioButton
+                        android:id="@+id/rbStudent"
+                        android:layout_width="0dp"
+                        android:layout_height="32dp"
+                        android:layout_marginEnd="6dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/role_pill_selector"
+                        android:button="@null"
+                        android:checked="true"
+                        android:drawableStart="@drawable/role_radio_indicator"
+                        android:drawablePadding="5dp"
+                        android:gravity="center"
+                        android:paddingStart="10dp"
+                        android:paddingEnd="10dp"
+                        android:text="Student"
+                        android:textColor="@color/role_text_selector"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <RadioButton
+                        android:id="@+id/rbTeacher"
+                        android:layout_width="0dp"
+                        android:layout_height="32dp"
+                        android:layout_marginEnd="6dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/role_pill_selector"
+                        android:button="@null"
+                        android:drawableStart="@drawable/role_radio_indicator"
+                        android:drawablePadding="5dp"
+                        android:gravity="center"
+                        android:paddingStart="10dp"
+                        android:paddingEnd="10dp"
+                        android:text="Teacher"
+                        android:textColor="@color/role_text_selector"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <RadioButton
+                        android:id="@+id/rbAdmin"
+                        android:layout_width="0dp"
+                        android:layout_height="32dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/role_pill_selector"
+                        android:button="@null"
+                        android:drawableStart="@drawable/role_radio_indicator"
+                        android:drawablePadding="5dp"
+                        android:gravity="center"
+                        android:paddingStart="10dp"
+                        android:paddingEnd="10dp"
+                        android:text="Admin"
+                        android:textColor="@color/role_text_selector"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+                </RadioGroup>
+
+                <!-- Primary Login Button (Figma: #1B8B3E, 48px height, 12px radius, bold white text) -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnLogin"
+                    style="@style/PrimaryActionButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="Login"
+                    android:textSize="15sp"
+                    app:backgroundTint="@color/primary_green"
+                    app:cornerRadius="12dp" />
+
+            </LinearLayout>
+
+            <!-- Bottom Footer (Figma: Outside card, centered over background) -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:layout_marginBottom="12dp"
+                android:text="RIT MCA • Production Secure JWT Auth"
+                android:textAlignment="center"
+                android:textColor="@color/text_primary"
+                android:textSize="13sp" />
+
         </LinearLayout>
-
-    </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
     <ProgressBar
         android:id="@+id/progressBar"

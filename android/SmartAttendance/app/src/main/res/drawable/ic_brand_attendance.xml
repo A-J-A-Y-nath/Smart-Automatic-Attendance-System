@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    <!-- Circular container (Figma: #BFC4C0 with 2px dark border) -->
+    <path
+        android:fillColor="@color/brand_logo_bg"
+        android:strokeColor="@color/brand_logo_stroke"
+        android:strokeWidth="2"
+        android:pathData="M32,32m-30,0a30,30 0,1 1,60 0a30,30 0,1 1,-60 0" />
+    <!-- Checkmark (Figma: #1B8B3E) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="@color/primary_green"
+        android:strokeWidth="2.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M21.33,32 L28,38.67 L42.67,24" />
+</vector>

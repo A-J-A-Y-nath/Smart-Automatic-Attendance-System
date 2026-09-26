@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <gradient
-        android:startColor="@color/bg_gradient_start"
-        android:endColor="@color/bg_gradient_end"
-        android:angle="135" />
-</shape>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Dedicated Figma Raster Background Image Texture covering 390x844 (object-cover) -->
+    <item>
+        <bitmap
+            android:src="@drawable/bg_screen_texture"
+            android:gravity="fill" />
+    </item>
+</layer-list>

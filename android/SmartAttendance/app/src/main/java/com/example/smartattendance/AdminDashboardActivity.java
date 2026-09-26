@@ -551,6 +551,26 @@ public class AdminDashboardActivity extends AppCompatActivity {
         });
     }
 
+    private EditText createStyledEditText(String hint) {
+        EditText et = new EditText(this);
+        et.setHint(hint);
+        et.setBackgroundResource(R.drawable.input_box);
+        int padH = (int) (14 * getResources().getDisplayMetrics().density);
+        int padV = (int) (10 * getResources().getDisplayMetrics().density);
+        et.setPadding(padH, padV, padH, padV);
+        et.setTextSize(13);
+        et.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.text_primary));
+        et.setHintTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.text_muted));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        int marginV = (int) (5 * getResources().getDisplayMetrics().density);
+        lp.setMargins(0, marginV, 0, marginV);
+        et.setLayoutParams(lp);
+        return et;
+    }
+
     private void showEditUserDialog(JSONObject user) {
         int userId = user.optInt("id");
         String currentName = user.optString("name");
@@ -564,11 +584,11 @@ public class AdminDashboardActivity extends AppCompatActivity {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(50, 20, 50, 20);
 
-        EditText etName = new EditText(this); etName.setHint("Full Name"); etName.setText(currentName);
-        EditText etEmail = new EditText(this); etEmail.setHint("Email"); etEmail.setText(currentEmail);
+        EditText etName = createStyledEditText("Full Name"); etName.setText(currentName);
+        EditText etEmail = createStyledEditText("Email"); etEmail.setText(currentEmail);
         etEmail.setInputType(InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
 
-        EditText etPassword = new EditText(this); etPassword.setHint("New Password (leave blank to keep unchanged)");
+        EditText etPassword = createStyledEditText("New Password (leave blank to keep unchanged)");
         etPassword.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
         layout.addView(etName);
@@ -578,8 +598,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
         EditText etRegNo = null;
         EditText etSemester = null;
         if ("Student".equals(role)) {
-            etRegNo = new EditText(this); etRegNo.setHint("Register No"); etRegNo.setText(currentReg);
-            etSemester = new EditText(this); etSemester.setHint("Semester"); etSemester.setText(String.valueOf(currentSem));
+            etRegNo = createStyledEditText("Register No"); etRegNo.setText(currentReg);
+            etSemester = createStyledEditText("Semester"); etSemester.setText(String.valueOf(currentSem));
             etSemester.setInputType(InputType.TYPE_CLASS_NUMBER);
             layout.addView(etRegNo);
             layout.addView(etSemester);
@@ -749,9 +769,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(50, 20, 50, 20);
 
-        EditText etSubjectName = new EditText(this); etSubjectName.setHint("Subject Name"); etSubjectName.setText(name);
-        EditText etSubjectCode = new EditText(this); etSubjectCode.setHint("Subject Code"); etSubjectCode.setText(code);
-        EditText etSemester = new EditText(this); etSemester.setHint("Semester"); etSemester.setText(String.valueOf(sem));
+        EditText etSubjectName = createStyledEditText("Subject Name"); etSubjectName.setText(name);
+        EditText etSubjectCode = createStyledEditText("Subject Code"); etSubjectCode.setText(code);
+        EditText etSemester = createStyledEditText("Semester"); etSemester.setText(String.valueOf(sem));
         etSemester.setInputType(InputType.TYPE_CLASS_NUMBER);
 
         TextView tvTeacherLabel = new TextView(this); tvTeacherLabel.setText("Assign Teacher:");
@@ -1011,11 +1031,11 @@ public class AdminDashboardActivity extends AppCompatActivity {
         boolean isActiveVal = classroom.optBoolean("is_active", true);
         int rssiVal = classroom.optInt("rssi_threshold", -85);
 
-        EditText etRoomName = new EditText(this); etRoomName.setHint("Room Name"); etRoomName.setText(name);
-        EditText etSsid = new EditText(this); etSsid.setHint("SSID"); etSsid.setText(ssid);
-        EditText etBssid = new EditText(this); etBssid.setHint("BSSID / MAC address (optional)"); etBssid.setText(bssidVal);
-        EditText etLocation = new EditText(this); etLocation.setHint("Location"); etLocation.setText(location);
-        EditText etRssi = new EditText(this); etRssi.setHint("RSSI threshold dBm"); etRssi.setText(String.valueOf(rssiVal));
+        EditText etRoomName = createStyledEditText("Room Name"); etRoomName.setText(name);
+        EditText etSsid = createStyledEditText("SSID"); etSsid.setText(ssid);
+        EditText etBssid = createStyledEditText("BSSID / MAC address (optional)"); etBssid.setText(bssidVal);
+        EditText etLocation = createStyledEditText("Location"); etLocation.setText(location);
+        EditText etRssi = createStyledEditText("RSSI threshold dBm"); etRssi.setText(String.valueOf(rssiVal));
         etRssi.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_SIGNED);
         android.widget.Switch swActive = new android.widget.Switch(this);
         swActive.setText("Active (visible to teachers/students)");
@@ -1087,9 +1107,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(50, 20, 50, 20);
 
-        EditText etName = new EditText(this); etName.setHint("Full Name");
-        EditText etEmail = new EditText(this); etEmail.setHint("Email"); etEmail.setInputType(InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-        EditText etPassword = new EditText(this); etPassword.setHint("Password"); etPassword.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        EditText etName = createStyledEditText("Full Name");
+        EditText etEmail = createStyledEditText("Email"); etEmail.setInputType(InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        EditText etPassword = createStyledEditText("Password"); etPassword.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
         layout.addView(etName);
         layout.addView(etEmail);
@@ -1098,8 +1118,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
         EditText etRegNo = null;
         EditText etSemester = null;
         if ("Student".equals(role)) {
-            etRegNo = new EditText(this); etRegNo.setHint("Register No (e.g. MCA2024001)");
-            etSemester = new EditText(this); etSemester.setHint("Semester (e.g. 4)"); etSemester.setInputType(InputType.TYPE_CLASS_NUMBER);
+            etRegNo = createStyledEditText("Register No (e.g. MCA2024001)");
+            etSemester = createStyledEditText("Semester (e.g. 4)"); etSemester.setInputType(InputType.TYPE_CLASS_NUMBER);
             layout.addView(etRegNo);
             layout.addView(etSemester);
         }
@@ -1166,9 +1186,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(50, 20, 50, 20);
 
-        EditText etSubjectName = new EditText(this); etSubjectName.setHint("Subject Name");
-        EditText etSubjectCode = new EditText(this); etSubjectCode.setHint("Subject Code (e.g. MCA401)");
-        EditText etSemester = new EditText(this); etSemester.setHint("Semester"); etSemester.setInputType(InputType.TYPE_CLASS_NUMBER);
+        EditText etSubjectName = createStyledEditText("Subject Name");
+        EditText etSubjectCode = createStyledEditText("Subject Code (e.g. MCA401)");
+        EditText etSemester = createStyledEditText("Semester"); etSemester.setInputType(InputType.TYPE_CLASS_NUMBER);
 
         TextView tvTeacherLabel = new TextView(this); tvTeacherLabel.setText("Assign Teacher:");
         Spinner spinnerTeacher = new Spinner(this);
@@ -1233,11 +1253,11 @@ public class AdminDashboardActivity extends AppCompatActivity {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(50, 20, 50, 20);
 
-        EditText etRoomName = new EditText(this); etRoomName.setHint("Room Name (e.g. MCA Lab 101)");
-        EditText etSsid = new EditText(this); etSsid.setHint("ESP8266/Router SSID (e.g. MCA_ROOM_101)");
-        EditText etBssid = new EditText(this); etBssid.setHint("BSSID / MAC address (optional, e.g. AA:BB:CC:DD:EE:FF)");
-        EditText etLocation = new EditText(this); etLocation.setHint("Location (e.g. Block A)");
-        EditText etRssi = new EditText(this); etRssi.setHint("RSSI threshold dBm (optional, default -85)");
+        EditText etRoomName = createStyledEditText("Room Name (e.g. MCA Lab 101)");
+        EditText etSsid = createStyledEditText("ESP8266/Router SSID (e.g. MCA_ROOM_101)");
+        EditText etBssid = createStyledEditText("BSSID / MAC address (optional, e.g. AA:BB:CC:DD:EE:FF)");
+        EditText etLocation = createStyledEditText("Location (e.g. Block A)");
+        EditText etRssi = createStyledEditText("RSSI threshold dBm (optional, default -85)");
         etRssi.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_SIGNED);
 
         layout.addView(etRoomName);

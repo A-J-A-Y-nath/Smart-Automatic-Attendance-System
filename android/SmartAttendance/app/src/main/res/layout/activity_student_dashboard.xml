@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -7,37 +7,41 @@
     android:background="@drawable/bg_gradient"
     tools:context=".StudentDashboardActivity">
 
-    <!-- Top bar -->
+    <!-- Top bar (Figma Screen 02 / 04) -->
     <TextView
         android:id="@+id/tvHeader"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_margin="24dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="8dp"
         android:text="Student Dashboard"
-        android:textAppearance="?attr/textAppearanceHeadlineMedium"
+        android:textColor="@color/text_primary"
+        android:textSize="20sp"
         android:textStyle="bold"
+        app:layout_constraintEnd_toStartOf="@+id/btnRefresh"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-
     <Button
         android:id="@+id/btnRefresh"
-        style="@style/Widget.Material3.Button.TextButton"
+        style="@style/SecondaryHeaderButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="4dp"
         android:text="Refresh"
+        android:textColor="@color/md_theme_light_primary"
         app:layout_constraintBottom_toBottomOf="@+id/tvHeader"
         app:layout_constraintEnd_toStartOf="@+id/btnLogout"
         app:layout_constraintTop_toTopOf="@+id/tvHeader" />
 
     <Button
         android:id="@+id/btnLogout"
-        style="@style/Widget.Material3.Button.TextButton"
+        style="@style/SecondaryHeaderButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="16dp"
         android:text="Logout"
+        android:textColor="@color/danger_red"
         app:layout_constraintBottom_toBottomOf="@+id/tvHeader"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@+id/tvHeader" />
@@ -48,7 +52,9 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:clipToPadding="false"
-        android:padding="16dp"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="24dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -59,22 +65,23 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Card 1: Profile Info -->
+            <!-- Card 1: Student Profile Info (Figma Screen 02) -->
             <LinearLayout
                 android:id="@+id/cardProfile"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 android:background="@drawable/glass_card"
-                android:elevation="4dp"
+                android:elevation="3dp"
                 android:orientation="vertical"
-                android:padding="20dp">
+                android:padding="18dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Profile"
-                    android:textAppearance="?attr/textAppearanceTitleMedium"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -82,15 +89,18 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
+                    android:lineSpacingExtra="3dp"
                     android:text="Loading profile..."
-                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp" />
             </LinearLayout>
 
-            <!-- Cards Row: Status + Action -->
+            <!-- Cards Row: Status + Action (Figma Screen 02 / 04) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
+                android:baselineAligned="false"
                 android:orientation="horizontal"
                 android:weightSum="2">
 
@@ -102,8 +112,7 @@
                     android:layout_marginEnd="6dp"
                     android:layout_weight="1"
                     android:background="@drawable/glass_card"
-                    android:elevation="4dp"
-                    android:gravity="center"
+                    android:elevation="3dp"
                     android:orientation="vertical"
                     android:padding="16dp">
 
@@ -111,20 +120,30 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Status"
-                        android:textAppearance="?attr/textAppearanceTitleMedium"
+                        android:textColor="@color/text_primary"
+                        android:textSize="13sp"
                         android:textStyle="bold" />
 
-                    <TextView
-                        android:id="@+id/tvStatus"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
                         android:gravity="center"
-                        android:text="Ready"
-                        android:textAppearance="?attr/textAppearanceBodyMedium" />
+                        android:minHeight="54dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:text="No active class\nsession."
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp"
+                            android:lineSpacingExtra="2dp" />
+                    </LinearLayout>
                 </LinearLayout>
 
-                <!-- Card 3: Scan Action -->
+                <!-- Card 3: Mark Present Action -->
                 <LinearLayout
                     android:id="@+id/cardAction"
                     android:layout_width="0dp"
@@ -132,8 +151,7 @@
                     android:layout_marginStart="6dp"
                     android:layout_weight="1"
                     android:background="@drawable/glass_card"
-                    android:elevation="4dp"
-                    android:gravity="center"
+                    android:elevation="3dp"
                     android:orientation="vertical"
                     android:padding="16dp">
 
@@ -141,28 +159,39 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Mark Present"
-                        android:textAlignment="center"
-                        android:textAppearance="?attr/textAppearanceTitleMedium"
+                        android:textColor="@color/text_primary"
+                        android:textSize="13sp"
                         android:textStyle="bold" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnScan"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:text="Scan WiFi"
-                        app:cornerRadius="12dp" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:minHeight="54dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnScan"
+                            style="@style/PrimaryActionButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="40dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:paddingHorizontal="8dp"
+                            android:text="Mark Attendance"
+                            android:textSize="12sp"
+                            app:cornerRadius="12dp" />
+                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Card 4: Attendance Stats -->
+            <!-- Card 4: Attendance Stats (Figma Screen 02 / 04) -->
             <LinearLayout
                 android:id="@+id/cardStats"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="24dp"
                 android:background="@drawable/glass_card"
-                android:elevation="4dp"
+                android:elevation="3dp"
                 android:orientation="vertical"
                 android:padding="20dp">
 
@@ -170,44 +199,46 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="My Attendance"
-                    android:textAppearance="?attr/textAppearanceTitleMedium"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
                     android:textStyle="bold" />
 
-                <!-- Overall summary row -->
+                <!-- Overall summary row with circular badge -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
-                    <!-- Big percentage circle -->
+                    <!-- Overall Percentage Circular Badge (Figma Screen 02) -->
                     <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
+                        android:layout_width="76dp"
+                        android:layout_height="76dp"
+                        android:layout_marginEnd="20dp"
+                        android:background="@drawable/circle_badge_overall"
                         android:gravity="center"
-                        android:layout_marginEnd="20dp">
+                        android:orientation="vertical">
 
                         <TextView
                             android:id="@+id/tvOverallPercent"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="--"
-                            android:textSize="36sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/md_theme_light_primary" />
+                            android:textColor="@color/md_theme_light_primary"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Overall"
-                            android:textSize="11sp"
-                            android:textAlignment="center"
-                            android:alpha="0.7" />
+                            android:textColor="@color/md_theme_light_primary"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
                     </LinearLayout>
 
-                    <!-- Present / Absent counts -->
+                    <!-- Present / Absent counts column -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -217,96 +248,101 @@
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal"
+                            android:layout_marginBottom="8dp"
                             android:gravity="center_vertical"
-                            android:layout_marginBottom="6dp">
+                            android:orientation="horizontal">
 
                             <TextView
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="Present"
-                                android:textAppearance="?attr/textAppearanceBodySmall"
-                                android:alpha="0.7"/>
+                                android:text="Present Classes"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="12sp" />
 
                             <TextView
                                 android:id="@+id/tvTotalPresent"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="--"
-                                android:textStyle="bold"
-                                android:textColor="@color/md_theme_light_primary"/>
+                                android:textColor="@color/md_theme_light_primary"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
                         </LinearLayout>
 
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal"
+                            android:layout_marginBottom="8dp"
                             android:gravity="center_vertical"
-                            android:layout_marginBottom="6dp">
+                            android:orientation="horizontal">
 
                             <TextView
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="Absent"
-                                android:textAppearance="?attr/textAppearanceBodySmall"
-                                android:alpha="0.7"/>
+                                android:text="Absent Classes"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="12sp" />
 
                             <TextView
                                 android:id="@+id/tvTotalAbsent"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="--"
-                                android:textStyle="bold"/>
+                                android:textColor="@color/absent_red"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
                         </LinearLayout>
 
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
 
                             <TextView
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="Total Classes"
-                                android:textAppearance="?attr/textAppearanceBodySmall"
-                                android:alpha="0.7"/>
+                                android:text="Total Sessions"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="12sp" />
 
                             <TextView
                                 android:id="@+id/tvTotalClasses"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="--"
-                                android:textStyle="bold"/>
+                                android:textColor="@color/text_primary"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Overall progress bar -->
+                <!-- Overall horizontal progress bar (Figma Screen 02) -->
                 <ProgressBar
                     android:id="@+id/progressOverall"
                     style="?android:attr/progressBarStyleHorizontal"
                     android:layout_width="match_parent"
-                    android:layout_height="12dp"
+                    android:layout_height="8dp"
                     android:layout_marginTop="16dp"
                     android:max="100"
                     android:progress="0"
-                    android:progressTint="@color/md_theme_light_primary"
-                    android:progressBackgroundTint="#33FFFFFF" />
+                    android:progressBackgroundTint="@color/divider_color"
+                    android:progressTint="@color/md_theme_light_primary" />
 
-                <!-- Per-subject breakdown -->
+                <!-- Per-subject breakdown header -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
-                    android:layout_marginBottom="8dp"
+                    android:layout_marginBottom="12dp"
                     android:text="Subject Breakdown"
-                    android:textAppearance="?attr/textAppearanceBodyMedium"
-                    android:textStyle="bold"
-                    android:alpha="0.8" />
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
 
                 <LinearLayout
                     android:id="@+id/subjectStatsContainer"
@@ -319,8 +355,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Loading stats..."
-                        android:textAppearance="?attr/textAppearanceBodySmall"
-                        android:alpha="0.6" />
+                        android:textColor="@color/text_muted"
+                        android:textSize="12sp" />
                 </LinearLayout>
             </LinearLayout>
 

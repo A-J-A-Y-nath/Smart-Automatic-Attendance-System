@@ -332,25 +332,32 @@ public class StudentDashboardActivity extends AppCompatActivity {
      * validated server-side (student.py) — this dialog just collects it.
      */
     private void showCodeEntryDialog() {
-        EditText etCode = new EditText(this);
-        etCode.setHint("4-digit code from teacher's screen");
-        etCode.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        android.view.View dialogView = getLayoutInflater().inflate(R.layout.dialog_code_entry, null);
+        EditText etCode = dialogView.findViewById(R.id.etDialogCode);
+        Button btnCancel = dialogView.findViewById(R.id.btnDialogCancel);
+        Button btnSubmit = dialogView.findViewById(R.id.btnDialogSubmit);
 
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Enter Attendance Code")
-            .setMessage("Ask your teacher for the code currently shown on their screen. It changes every 15 seconds.")
-            .setView(etCode)
-            .setPositiveButton("Mark Attendance", (dialog, which) -> {
-                String code = etCode.getText().toString().trim();
-                if (code.isEmpty()) {
-                    Toast.makeText(this, "Enter the code shown on your teacher's screen.", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                enteredSessionCode = code;
-                startScanning();
-            })
-            .setNegativeButton("Cancel", null)
-            .show();
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create();
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        btnSubmit.setOnClickListener(v -> {
+            String code = etCode.getText().toString().trim();
+            if (code.isEmpty()) {
+                Toast.makeText(this, "Enter the code shown on your teacher's screen.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            enteredSessionCode = code;
+            dialog.dismiss();
+            startScanning();
+        });
+
+        dialog.show();
     }
 
     private void startScanning() {
@@ -771,81 +778,58 @@ public class StudentDashboardActivity extends AppCompatActivity {
                                 );
 
                             android.widget.LinearLayout itemLayout =
-                                new android.widget.LinearLayout(
-                                    StudentDashboardActivity.this
-                                );
+                                new android.widget.LinearLayout(StudentDashboardActivity.this);
+                            itemLayout.setOrientation(android.widget.LinearLayout.VERTICAL);
+                            itemLayout.setPadding(0, 8, 0, 14);
 
-                            itemLayout.setOrientation(
-                                android.widget.LinearLayout.VERTICAL
-                            );
+                            // Header row with Name on left and Percentage (X/Y) on right
+                            android.widget.LinearLayout rowHeader =
+                                new android.widget.LinearLayout(StudentDashboardActivity.this);
+                            rowHeader.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+                            rowHeader.setGravity(android.view.Gravity.CENTER_VERTICAL);
 
-                            itemLayout.setPadding(
-                                0,
-                                8,
-                                0,
-                                16
-                            );
+                            TextView titleTv = new TextView(StudentDashboardActivity.this);
+                            titleTv.setText(sName);
+                            titleTv.setTextSize(12);
+                            titleTv.setTypeface(null, android.graphics.Typeface.BOLD);
+                            titleTv.setTextColor(ContextCompat.getColor(StudentDashboardActivity.this, R.color.text_primary));
+                            android.widget.LinearLayout.LayoutParams titleParams =
+                                new android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                            titleTv.setLayoutParams(titleParams);
 
-                            TextView titleTv =
-                                new TextView(
-                                    StudentDashboardActivity.this
-                                );
+                            int statColor = (sPct >= 75.0) ?
+                                ContextCompat.getColor(StudentDashboardActivity.this, R.color.present_green) :
+                                ContextCompat.getColor(StudentDashboardActivity.this, R.color.absent_red);
 
-                            titleTv.setText(
-                                String.format(
-                                    Locale.getDefault(),
-                                    "%s (%s) — %.1f%%",
-                                    sName,
-                                    sCode,
-                                    sPct
-                                )
-                            );
+                            TextView countTv = new TextView(StudentDashboardActivity.this);
+                            countTv.setText(String.format(Locale.getDefault(), "%.1f%% (%d/%d)", sPct, sPresent, sTotal));
+                            countTv.setTextSize(12);
+                            countTv.setTypeface(null, android.graphics.Typeface.BOLD);
+                            countTv.setTextColor(statColor);
 
-                            titleTv.setTextSize(13);
-                            titleTv.setTypeface(
+                            rowHeader.addView(titleTv);
+                            rowHeader.addView(countTv);
+
+                            ProgressBar subProgress = new ProgressBar(
+                                StudentDashboardActivity.this,
                                 null,
-                                android.graphics.Typeface.BOLD
+                                android.R.attr.progressBarStyleHorizontal
                             );
-
-                            TextView countTv =
-                                new TextView(
-                                    StudentDashboardActivity.this
-                                );
-
-                            countTv.setText(
-                                String.format(
-                                    Locale.getDefault(),
-                                    "Present: %d / Total: %d",
-                                    sPresent,
-                                    sTotal
-                                )
-                            );
-
-                            countTv.setTextSize(11);
-                            countTv.setAlpha(0.7f);
-
-                            ProgressBar subProgress =
-                                new ProgressBar(
-                                    StudentDashboardActivity.this,
-                                    null,
-                                    android.R.attr.progressBarStyleHorizontal
-                                );
-
                             subProgress.setMax(100);
+                            subProgress.setProgress((int) Math.round(sPct));
+                            subProgress.setProgressTintList(android.content.res.ColorStateList.valueOf(statColor));
+                            subProgress.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                                ContextCompat.getColor(StudentDashboardActivity.this, R.color.divider_color)
+                            ));
+                            android.widget.LinearLayout.LayoutParams progParams =
+                                new android.widget.LinearLayout.LayoutParams(
+                                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                                    (int) (6 * getResources().getDisplayMetrics().density)
+                                );
+                            progParams.topMargin = (int) (6 * getResources().getDisplayMetrics().density);
+                            subProgress.setLayoutParams(progParams);
 
-                            subProgress.setProgress(
-                                (int) Math.round(sPct)
-                            );
-
-                            subProgress.setPadding(
-                                0,
-                                4,
-                                0,
-                                0
-                            );
-
-                            itemLayout.addView(titleTv);
-                            itemLayout.addView(countTv);
+                            itemLayout.addView(rowHeader);
                             itemLayout.addView(subProgress);
 
                             container.addView(itemLayout);

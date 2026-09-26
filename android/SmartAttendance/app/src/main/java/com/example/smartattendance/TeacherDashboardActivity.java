@@ -385,6 +385,8 @@ public class TeacherDashboardActivity extends AppCompatActivity {
         }
         btnStartSession.setEnabled(false);
         if (btnStopSession != null) btnStopSession.setVisibility(View.VISIBLE);
+        TextView badgeActive = findViewById(R.id.badgeActiveSession);
+        if (badgeActive != null) badgeActive.setVisibility(View.VISIBLE);
         fetchSessionCode(subjectName); // show a code immediately, don't wait for the first tick
 
         sessionTimer = new CountDownTimer(seconds * 1000L, 1000) {
@@ -401,7 +403,7 @@ public class TeacherDashboardActivity extends AppCompatActivity {
                 } else {
                     codeLine = "\n\nLoading attendance code...";
                 }
-                tvTimerStatus.setText("SESSION ACTIVE\n" + subjectName + "\nTime Left: " + timeStr + codeLine);
+                tvTimerStatus.setText(subjectName + "\nTime Left: " + timeStr + codeLine);
 
                 // Fetch live roster every 5 seconds to keep present students list up to date
                 if (sec % 5 == 0) {
@@ -424,6 +426,7 @@ public class TeacherDashboardActivity extends AppCompatActivity {
                 btnStartSession.setEnabled(true);
                 spinnerSubject.setEnabled(true);
                 if (btnStopSession != null) btnStopSession.setVisibility(View.GONE);
+                if (badgeActive != null) badgeActive.setVisibility(View.GONE);
                 currentSessionCode = null;
                 codeSecondsRemaining = -1;
                 Toast.makeText(TeacherDashboardActivity.this, "Attendance Session EXPIRED for " + subjectName, Toast.LENGTH_LONG).show();
@@ -465,6 +468,8 @@ public class TeacherDashboardActivity extends AppCompatActivity {
                     sessionTimer.cancel();
                 }
                 tvTimerStatus.setText("Session Stopped / Closed");
+                TextView badgeActive = findViewById(R.id.badgeActiveSession);
+                if (badgeActive != null) badgeActive.setVisibility(View.GONE);
                 btnStartSession.setText("Start Attendance Session");
                 btnStartSession.setEnabled(true);
                 spinnerSubject.setEnabled(true);
@@ -480,20 +485,33 @@ public class TeacherDashboardActivity extends AppCompatActivity {
         });
     }
     private void showBeaconOptionDialog() {
-        String[] options = {"Classroom Beacon (default)", "Teacher Hotspot", "Nearby Wi-Fi"};
-        new AlertDialog.Builder(this)
-            .setTitle("Attendance Beacon Source")
-            .setItems(options, (dialog, which) -> {
-                if (which == 0) {
-                    startSession("CLASSROOM", null, null);
-                } else if (which == 1) {
-                    showHotspotEntryDialog();
-                } else {
-                    showNearbyWifiPickerDialog();
-                }
-            })
-            .setNegativeButton("Cancel", null)
-            .show();
+        android.view.View dialogView = getLayoutInflater().inflate(R.layout.dialog_beacon_picker, null);
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create();
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+
+        dialogView.findViewById(R.id.optClassroomBeacon).setOnClickListener(v -> {
+            dialog.dismiss();
+            startSession("CLASSROOM", null, null);
+        });
+
+        dialogView.findViewById(R.id.optTeacherHotspot).setOnClickListener(v -> {
+            dialog.dismiss();
+            showHotspotEntryDialog();
+        });
+
+        dialogView.findViewById(R.id.optNearbyWifi).setOnClickListener(v -> {
+            dialog.dismiss();
+            showNearbyWifiPickerDialog();
+        });
+
+        dialogView.findViewById(R.id.btnBeaconCancel).setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
     }
 
     private void showHotspotEntryDialog() {
@@ -735,16 +753,27 @@ public class TeacherDashboardActivity extends AppCompatActivity {
             return;
         }
 
-        String[] names = new String[lastAbsentStudents.size()];
-        for (int i = 0; i < lastAbsentStudents.size(); i++) {
-            JSONObject s = lastAbsentStudents.get(i);
-            names[i] = s.optString("student_name") + " (" + s.optString("register_no", "N/A") + ")";
+        android.view.View dialogView = getLayoutInflater().inflate(R.layout.dialog_manual_override, null);
+        LinearLayout container = dialogView.findViewById(R.id.containerAbsentStudents);
+        Button btnCancel = dialogView.findViewById(R.id.btnManualCancel);
+
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create();
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
         }
 
-        new AlertDialog.Builder(this)
-            .setTitle("Mark Present (Manual)")
-            .setItems(names, (dialog, which) -> {
-                JSONObject student = lastAbsentStudents.get(which);
+        for (int i = 0; i < lastAbsentStudents.size(); i++) {
+            final JSONObject student = lastAbsentStudents.get(i);
+            android.view.View itemView = getLayoutInflater().inflate(R.layout.item_manual_student, container, false);
+            TextView tvName = itemView.findViewById(R.id.tvStudentName);
+            TextView btnMark = itemView.findViewById(R.id.btnMarkAction);
+
+            tvName.setText(student.optString("student_name") + " (" + student.optString("register_no", "N/A") + ")");
+            btnMark.setOnClickListener(v -> {
+                dialog.dismiss();
                 int studentId = student.optInt("student_id");
                 try {
                     JSONObject body = new JSONObject();
@@ -767,11 +796,15 @@ public class TeacherDashboardActivity extends AppCompatActivity {
                         }
                     });
                 } catch (JSONException e) {
+                    progressBar.setVisibility(View.GONE);
                     Toast.makeText(this, "Error building request.", Toast.LENGTH_SHORT).show();
                 }
-            })
-            .setNegativeButton("Cancel", null)
-            .show();
+            });
+            container.addView(itemView);
+        }
+
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
     }
 
     private void showHistoryFilterDialog() {
